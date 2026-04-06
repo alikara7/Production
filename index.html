@@ -288,8 +288,8 @@ select{width:100%;padding:11px 14px;background:var(--bg);border:1px solid var(--
       <div class="user-chip">
         <div class="uavatar" id="uavatar"></div>
         <span class="uname-chip" id="uname"></span>
+        <span id="rbadge" class="role-badge"></span>
       </div>
-      <span id="rbadge" class="role-badge"></span>
       <button class="icon-btn theme-btn" id="theme-toggle" onclick="toggleTheme()" title="Toggle theme">☀️</button>
       <button class="icon-btn lang-btn" id="lang-toggle" onclick="toggleLang()" title="Language">EN</button>
       <button class="icon-btn" onclick="confirmLogout()" data-i18n="logOut">logout</button>
@@ -412,24 +412,24 @@ select{width:100%;padding:11px 14px;background:var(--bg);border:1px solid var(--
           <div class="machine-name">All Machines</div>
           <div class="machine-stat" id="ms-all">— logs</div>
         </div>
-        <div class="machine-card" id="mc-1" onclick="filterMachine('Machine 1',this)">
-          <div class="machine-name">Machine 1</div>
+        <div class="machine-card" id="mc-1" onclick="filterMachine('Inpak 1',this)">
+          <div class="machine-name">Inpak 1</div>
           <div class="machine-stat" id="ms-1">— logs</div>
         </div>
-        <div class="machine-card" id="mc-2" onclick="filterMachine('Machine 2',this)">
-          <div class="machine-name">Machine 2</div>
+        <div class="machine-card" id="mc-2" onclick="filterMachine('Inpak 2',this)">
+          <div class="machine-name">Inpak 2</div>
           <div class="machine-stat" id="ms-2">— logs</div>
         </div>
-        <div class="machine-card" id="mc-3" onclick="filterMachine('Machine 3',this)">
-          <div class="machine-name">Machine 3</div>
+        <div class="machine-card" id="mc-3" onclick="filterMachine('Inpak 3',this)">
+          <div class="machine-name">Inpak 3</div>
           <div class="machine-stat" id="ms-3">— logs</div>
         </div>
-        <div class="machine-card" id="mc-4" onclick="filterMachine('Machine 4',this)">
-          <div class="machine-name">Machine 4</div>
+        <div class="machine-card" id="mc-4" onclick="filterMachine('Yenimak 1',this)">
+          <div class="machine-name">Yenimak 1</div>
           <div class="machine-stat" id="ms-4">— logs</div>
         </div>
-        <div class="machine-card" id="mc-5" onclick="filterMachine('Machine 5',this)">
-          <div class="machine-name">Machine 5</div>
+        <div class="machine-card" id="mc-5" onclick="filterMachine('Yenimak 2',this)">
+          <div class="machine-name">Yenimak 2</div>
           <div class="machine-stat" id="ms-5">— logs</div>
         </div>
       </div>
@@ -513,7 +513,7 @@ select{width:100%;padding:11px 14px;background:var(--bg);border:1px solid var(--
       <div class="f-row"><label>MACHINE</label>
         <select id="s-machine" style="margin-bottom:16px">
           <option value="">Select machine</option>
-          <option>Machine 1</option><option>Machine 2</option><option>Machine 3</option><option>Machine 4</option><option>Machine 5</option>
+          <option>Inpak 1</option><option>Inpak 2</option><option>Inpak 3</option><option>Yenimak 1</option><option>Yenimak 2</option>
         </select>
       </div>
     </div>
@@ -589,7 +589,7 @@ select{width:100%;padding:11px 14px;background:var(--bg);border:1px solid var(--
       <div class="f-row"><label>MACHINE</label>
         <select id="m-machine" style="margin-bottom:16px">
           <option value="">Select machine</option>
-          <option>Machine 1</option><option>Machine 2</option><option>Machine 3</option><option>Machine 4</option><option>Machine 5</option>
+          <option>Inpak 1</option><option>Inpak 2</option><option>Inpak 3</option><option>Yenimak 1</option><option>Yenimak 2</option>
         </select>
       </div>
     </div>
@@ -873,7 +873,7 @@ function renderDashboard(){
     ? pendingOrders.map(o=>`<div class="dash-item"><span>${esc(o.order_no)} · ${esc(o.customer)}</span><span style="color:var(--text)">${esc(o.product)} <span style="color:var(--muted)">(${o.qty} ${esc(o.unit||'')})</span></span></div>`).join('')
     : `<div style="color:var(--muted);font-size:13px;font-family:'DM Mono',monospace;padding:12px 0">${t('noPending')}</div>`;
 
-  const machines = ['Machine 1','Machine 2','Machine 3','Machine 4','Machine 5'];
+  const machines = ['Inpak 1','Inpak 2','Inpak 3','Yenimak 1','Yenimak 2'];
   document.getElementById('d-machines').innerHTML = `<div class="dash-machine-grid">
     ${machines.map(m=>{
       const logs=todayLogs.filter(l=>l.machine===m);
@@ -1015,10 +1015,11 @@ async function changeOrderStatus(id,newStatus){
 // ── MACHINES ───────────────────────────────────────────
 function renderMachines(){
   const tbody=document.getElementById('tb-machines');
-  const mNames=['Machine 1','Machine 2','Machine 3','Machine 4','Machine 5'];
+  const mNames=['Inpak 1','Inpak 2','Inpak 3','Yenimak 1','Yenimak 2'];
+  const mKeys={'Inpak 1':'1','Inpak 2':'2','Inpak 3':'3','Yenimak 1':'4','Yenimak 2':'5'};
   mNames.forEach(m=>{
     const count=machineLogs.filter(l=>l.machine===m).length;
-    const key=m.replace('Machine ','');
+    const key=mKeys[m];
     const el=document.getElementById('ms-'+key);
     if(el) el.textContent=count+' log'+(count!==1?'s':'');
   });
