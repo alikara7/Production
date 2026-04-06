@@ -239,6 +239,10 @@ select{width:100%;padding:11px 14px;background:var(--bg);border:1px solid var(--
   <div class="login-box">
     <div class="login-logo">Prod<span>Base</span></div>
     <div class="login-sub">// production management · live sync</div>
+    <div class="role-select">
+      <button class="role-btn active" onclick="selRole('manager',this)">Manager</button>
+      <button class="role-btn" onclick="selRole('employee',this)">Employee</button>
+    </div>
     <div class="f-row"><label>YOUR NAME</label><input type="text" id="l-name" placeholder="e.g. Ahmet" autocomplete="username"/></div>
     <div class="f-row"><label>PIN CODE</label><input type="password" id="l-pin" placeholder="••••" maxlength="6" onkeydown="if(event.key==='Enter')doLogin()"/></div>
     <button class="btn-primary" onclick="doLogin()">Enter System</button>
@@ -597,6 +601,11 @@ let searches = { schedule: '', orders: '', machines: '', history: '' };
 let machineFilter = 'all';
 
 function setSync(s,t){document.getElementById('sdot').className='sync-dot '+s;document.getElementById('stxt').textContent=t;}
+
+function selRole(r,btn){
+  document.querySelectorAll('.role-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+}
 
 function doLogin(){
   const name=document.getElementById('l-name').value.trim().toLowerCase();
