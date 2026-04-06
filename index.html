@@ -7,7 +7,9 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#0a0a0f">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23b347ff'/><text x='50' y='72' font-size='65' font-weight='800' font-family='sans-serif' fill='white' text-anchor='middle'>P</text></svg>">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23b347ff'/><text x='50' y='72' font-size='65' font-weight='800' font-family='sans-serif' fill='white' text-anchor='middle'>P</text></svg>">
+<link rel="shortcut icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23b347ff'/><text x='50' y='72' font-size='65' font-weight='800' font-family='sans-serif' fill='white' text-anchor='middle'>P</text></svg>">
+<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23b347ff'/><text x='50' y='72' font-size='65' font-weight='800' font-family='sans-serif' fill='white' text-anchor='middle'>P</text></svg>">
 <title>ProdBase</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -185,18 +187,29 @@ select{width:100%;padding:11px 14px;background:var(--bg);border:1px solid var(--
 @keyframes slideOut{from{opacity:1;transform:translateX(0)}to{opacity:0;transform:translateX(20px)}}
 @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
 @keyframes modalPop{from{opacity:0;transform:scale(.88)}to{opacity:1;transform:scale(1)}}
+/* DASHBOARD MACHINE ACTIVITY GRID */
+.dash-machine-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-top:4px;}
+.dash-machine-cell{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:12px;text-align:center;}
+.dash-machine-cell .dm-name{font-size:12px;font-weight:700;margin-bottom:6px;}
+.dash-machine-cell .dm-stat{font-size:11px;font-family:'DM Mono',monospace;}
 /* RESPONSIVE */
-@media(max-width:900px){.pipeline{grid-template-columns:repeat(2,1fr);}.pipe-arrow{display:none;}.dash-grid{grid-template-columns:1fr 1fr;}.machine-grid{grid-template-columns:repeat(3,1fr);}.dash-row{grid-template-columns:1fr;}}
+@media(max-width:900px){.pipeline{grid-template-columns:repeat(2,1fr);}.pipe-arrow{display:none;}.dash-grid{grid-template-columns:1fr 1fr;}.machine-grid{grid-template-columns:repeat(3,1fr);}.dash-row{grid-template-columns:1fr;}.dash-machine-grid{grid-template-columns:repeat(3,1fr);}}
 @media(max-width:700px){
-  .topbar{height:calc(54px + env(safe-area-inset-top));padding:env(safe-area-inset-top) 12px 0;}
+  .topbar{height:calc(48px + env(safe-area-inset-top));padding:env(safe-area-inset-top) 10px 0;}
+  .topbar-logo{font-size:16px;}
+  .topbar-right{gap:6px;flex-wrap:nowrap;}
   .main{padding:14px 10px 100px;}
   .uname-chip{display:none;}
   .role-badge{display:none;}
+  .sync-pill span{display:none;}
+  .sync-pill{padding:0;background:none;border:none;}
+  .icon-btn{padding:4px 8px;font-size:11px;}
+  .user-chip{padding:3px 8px 3px 3px;}
+  .uavatar{width:22px;height:22px;font-size:10px;}
   .tabs{display:none;}
   .mobile-nav{display:flex;}
   .table-wrap{display:none;}
   .card-list{display:block;}
-  .table-wrap.history-table{display:block;}
   .search-box{width:100%;margin-bottom:8px;}
   .sec-right{flex-wrap:wrap;width:100%;}
   .sec-head{flex-direction:column;align-items:flex-start;}
@@ -209,8 +222,12 @@ select{width:100%;padding:11px 14px;background:var(--bg);border:1px solid var(--
   .machine-grid{grid-template-columns:1fr 1fr 1fr;}
   .pipe-card{padding:14px;}
   .pipe-val{font-size:24px;}
+  .dash-machine-grid{grid-template-columns:1fr 1fr;gap:8px;}
+  .dash-machine-cell{padding:10px;}
+  .dash-item{font-size:12px;}
+  .ic-mid{grid-template-columns:1fr 1fr;}
 }
-@media(max-width:400px){.pipeline{grid-template-columns:1fr 1fr;}.dash-grid{grid-template-columns:1fr;}.machine-grid{grid-template-columns:1fr 1fr;}}
+@media(max-width:400px){.pipeline{grid-template-columns:1fr 1fr;}.dash-grid{grid-template-columns:1fr;}.machine-grid{grid-template-columns:1fr 1fr;}.dash-machine-grid{grid-template-columns:1fr 1fr;}}
 </style>
 </head>
 <body>
@@ -399,10 +416,11 @@ select{width:100%;padding:11px 14px;background:var(--bg);border:1px solid var(--
           <input class="search-box" type="text" placeholder="🔍 search..." oninput="filterSearch('history',this.value)"/>
         </div>
       </div>
-      <div class="table-wrap history-table"><table>
+      <div class="table-wrap"><table>
         <thead><tr><th>DATE</th><th>MACHINE</th><th>PRODUCT</th><th>PLANNED</th><th>ACTUAL</th><th>DIFF</th><th>START</th><th>END</th><th>DURATION</th><th>BY</th><th>NOTES</th></tr></thead>
         <tbody id="tb-history"></tbody>
       </table></div>
+      <div class="card-list" id="cards-history"></div>
     </div>
   </div>
 
@@ -732,16 +750,16 @@ function renderDashboard(){
     : '<div style="color:var(--muted);font-size:13px;font-family:\'DM Mono\',monospace;padding:12px 0">no pending orders</div>';
 
   const machines = ['Machine 1','Machine 2','Machine 3','Machine 4','Machine 5'];
-  document.getElementById('d-machines').innerHTML = `<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-top:4px">
+  document.getElementById('d-machines').innerHTML = `<div class="dash-machine-grid">
     ${machines.map(m=>{
       const logs=todayLogs.filter(l=>l.machine===m);
       const out=logs.reduce((a,l)=>a+(l.output||0),0);
       const dec=logs.reduce((a,l)=>a+(l.dechet||0),0);
-      return `<div style="background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:12px;text-align:center">
-        <div style="font-size:12px;font-weight:700;margin-bottom:6px">${m}</div>
-        <div style="font-size:11px;font-family:'DM Mono',monospace;color:var(--green)">out: ${out}</div>
-        <div style="font-size:11px;font-family:'DM Mono',monospace;color:var(--warn)">dechet: ${dec}</div>
-        <div style="font-size:11px;font-family:'DM Mono',monospace;color:var(--muted)">${logs.length} log${logs.length!==1?'s':''}</div>
+      return `<div class="dash-machine-cell">
+        <div class="dm-name">${m}</div>
+        <div class="dm-stat" style="color:var(--green)">out: ${out}</div>
+        <div class="dm-stat" style="color:var(--warn)">dechet: ${dec}</div>
+        <div class="dm-stat" style="color:var(--muted)">${logs.length} log${logs.length!==1?'s':''}</div>
       </div>`;
     }).join('')}
   </div>`;
@@ -997,7 +1015,7 @@ function renderHistory(){
   const tbody=document.getElementById('tb-history');
   let items=schedules.filter(s=>s.status==='done');
   if(searches.history) items=items.filter(s=>((s.product||'')+(s.machine||'')+(s.notes||'')+(s.variance_notes||'')).toLowerCase().includes(searches.history));
-  if(!items.length){tbody.innerHTML=`<tr><td colspan="11"><div class="empty">no completed productions</div></td></tr>`;return;}
+  if(!items.length){tbody.innerHTML=`<tr><td colspan="11"><div class="empty">no completed productions</div></td></tr>`;document.getElementById('cards-history').innerHTML='<div class="empty">no completed productions</div>';return;}
   tbody.innerHTML=items.map(s=>{
     const diff=(s.actual_qty!=null&&s.planned_qty!=null)?(s.actual_qty-s.planned_qty):null;
     const diffStr=diff!=null?(diff>=0?'+':'')+diff:'—';
@@ -1019,6 +1037,22 @@ function renderHistory(){
       <td style="color:var(--muted)">${esc(s.created_by||'—')}</td>
       <td style="color:var(--muted);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(s.variance_notes||s.notes||'—')}</td>
     </tr>`;
+  }).join('');
+  // Mobile cards for history
+  document.getElementById('cards-history').innerHTML=items.map(s=>{
+    const diff=(s.actual_qty!=null&&s.planned_qty!=null)?(s.actual_qty-s.planned_qty):null;
+    const diffStr=diff!=null?(diff>=0?'+':'')+diff:'—';
+    const diffColor=diff!=null?(diff<0?'var(--danger)':diff>0?'var(--green)':'var(--muted)'):'var(--muted)';
+    let durStr='—';
+    if(s.actual_start&&s.actual_end){durStr=Math.round((new Date(s.actual_end)-new Date(s.actual_start))/36e5*10)/10+'h';}
+    let startStr='—',endStr='—';
+    if(s.actual_start){startStr=new Date(s.actual_start).toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'});}
+    if(s.actual_end){endStr=new Date(s.actual_end).toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'});}
+    return `<div class="item-card">
+      <div class="ic-top"><div><div class="ic-name">${esc(s.product)}</div><div class="ic-sub">${esc(s.machine)} · ${s.date}</div></div><span class="sbadge s-done">done</span></div>
+      <div class="ic-mid"><div class="ic-field"><label>PLANNED</label><span>${s.planned_qty||0}</span></div><div class="ic-field"><label>ACTUAL</label><span style="font-weight:700">${s.actual_qty!=null?s.actual_qty:'—'}</span></div><div class="ic-field"><label>DIFF</label><span style="color:${diffColor};font-weight:700">${diffStr}</span></div><div class="ic-field"><label>START</label><span>${startStr}</span></div><div class="ic-field"><label>END</label><span>${endStr}</span></div><div class="ic-field"><label>DURATION</label><span style="color:var(--accent)">${durStr}</span></div></div>
+      ${s.variance_notes||s.notes?`<div style="font-size:12px;color:var(--muted);font-family:'DM Mono',monospace;padding:0 2px">${esc(s.variance_notes||s.notes)}</div>`:''}
+    </div>`;
   }).join('');
 }
 
