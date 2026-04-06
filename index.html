@@ -14,8 +14,10 @@
 <title>ProdBase</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<style>
+<style id="theme-style">
 :root{--bg:#0a0a0f;--surface:#13131a;--surface2:#1c1c26;--border:#2a2a3a;--accent:#b347ff;--accent2:#47c5ff;--green:#4dffb4;--warn:#ffb347;--danger:#ff5c5c;--text:#f0f0f0;--muted:#777;--radius:10px;--shadow:0 1px 4px rgba(0,0,0,.35),0 0 0 .5px rgba(255,255,255,.04);--shadow-md:0 4px 12px rgba(0,0,0,.5);--shadow-lg:0 10px 28px rgba(0,0,0,.55),0 0 0 .5px rgba(255,255,255,.04);}
+</style>
+<style>
 *{box-sizing:border-box;margin:0;padding:0;}
 html{scrollbar-gutter:stable}
 body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-height:100vh;transition:background .2s,color .2s;overflow-x:hidden;}
@@ -53,6 +55,8 @@ textarea{resize:vertical;min-height:72px;}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
 .icon-btn{font-size:12px;color:var(--muted);background:none;border:1px solid var(--border);padding:5px 11px;border-radius:20px;cursor:pointer;font-family:'DM Mono',monospace;transition:all .2s;}
 .icon-btn:hover{border-color:var(--accent);color:var(--accent);}
+.theme-btn{font-size:16px;padding:5px 9px;border-radius:20px;}
+.lang-btn{font-size:11px;font-weight:700;padding:5px 9px;border-radius:20px;letter-spacing:.5px;}
 .main{padding:28px 24px;max-width:1360px;margin:0 auto;}
 /* TABS - workflow order */
 .tabs{display:flex;gap:4px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:4px;margin-bottom:24px;overflow-x:auto;box-shadow:var(--shadow);}
@@ -229,23 +233,48 @@ select{width:100%;padding:11px 14px;background:var(--bg);border:1px solid var(--
   .ic-mid{grid-template-columns:1fr 1fr;}
 }
 @media(max-width:400px){.pipeline{grid-template-columns:1fr 1fr;}.dash-grid{grid-template-columns:1fr;}.machine-grid{grid-template-columns:1fr 1fr;}.dash-machine-grid{grid-template-columns:1fr 1fr;}}
+/* LOGOUT CONFIRM DIALOG */
+.logout-overlay{position:fixed;inset:0;z-index:1100;background:rgba(0,0,0,.45);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);display:none;align-items:center;justify-content:center;padding:24px}
+.logout-overlay.open{display:flex}
+.logout-dialog{background:var(--surface);border-radius:20px;padding:28px 24px 20px;max-width:320px;width:100%;box-shadow:var(--shadow-lg);text-align:center;animation:modalPop .28s cubic-bezier(.34,1.56,.64,1)}
+.ld-icon{font-size:38px;margin-bottom:10px}
+.ld-title{font-size:18px;font-weight:800;letter-spacing:-.02em;margin-bottom:8px}
+.ld-desc{font-size:14px;color:var(--muted);line-height:1.6;margin-bottom:22px}
+.ld-btns{display:flex;gap:10px}
+.ld-cancel{flex:1;padding:13px;background:var(--surface2);border:.5px solid var(--border);border-radius:13px;color:var(--text);font-family:'Syne',sans-serif;font-size:15px;font-weight:600;cursor:pointer;transition:opacity .15s}
+.ld-cancel:hover{opacity:.75}
+.ld-confirm{flex:1;padding:13px;background:var(--danger);border:none;border-radius:13px;color:#fff;font-family:'Syne',sans-serif;font-size:15px;font-weight:700;cursor:pointer;transition:opacity .15s}
+.ld-confirm:hover{opacity:.85}
 </style>
 </head>
 <body>
 
 <div id="toast-box"></div>
 
+<!-- Logout Confirm Dialog -->
+<div class="logout-overlay" id="logout-overlay" onclick="if(event.target===this)closeLogoutOverlay()">
+  <div class="logout-dialog">
+    <div class="ld-icon">🚪</div>
+    <div class="ld-title" data-i18n="logOutQ">Log Out?</div>
+    <div class="ld-desc" data-i18n="logOutDesc">You will need to enter your PIN again to access the system.</div>
+    <div class="ld-btns">
+      <button class="ld-cancel" onclick="closeLogoutOverlay()" data-i18n="cancel">Cancel</button>
+      <button class="ld-confirm" onclick="doActualLogout()" data-i18n="logOut">Log Out</button>
+    </div>
+  </div>
+</div>
+
 <div id="login-screen">
   <div class="login-box">
     <div class="login-logo">Prod<span>Base</span></div>
     <div class="login-sub">// production management · live sync</div>
     <div class="role-select">
-      <button class="role-btn active" onclick="selRole('manager',this)">Manager</button>
-      <button class="role-btn" onclick="selRole('employee',this)">Employee</button>
+      <button class="role-btn active" onclick="selRole('manager',this)" data-i18n="manager">Manager</button>
+      <button class="role-btn" onclick="selRole('employee',this)" data-i18n="employee">Employee</button>
     </div>
-    <div class="f-row"><label>YOUR NAME</label><input type="text" id="l-name" placeholder="e.g. Ahmet" autocomplete="username"/></div>
-    <div class="f-row"><label>PIN CODE</label><input type="password" id="l-pin" placeholder="••••" maxlength="6" onkeydown="if(event.key==='Enter')doLogin()"/></div>
-    <button class="btn-primary" onclick="doLogin()">Enter System</button>
+    <div class="f-row"><label data-i18n="yourName">YOUR NAME</label><input type="text" id="l-name" placeholder="e.g. Ahmet" autocomplete="username"/></div>
+    <div class="f-row"><label data-i18n="pinCode">PIN CODE</label><input type="password" id="l-pin" placeholder="••••" maxlength="6" onkeydown="if(event.key==='Enter')doLogin()"/></div>
+    <button class="btn-primary" onclick="doLogin()" data-i18n="enterSystem">Enter System</button>
     <div class="login-error" id="l-err"></div>
   </div>
 </div>
@@ -261,17 +290,19 @@ select{width:100%;padding:11px 14px;background:var(--bg);border:1px solid var(--
         <span class="uname-chip" id="uname"></span>
       </div>
       <span id="rbadge" class="role-badge"></span>
-      <button class="icon-btn" onclick="logout()">logout</button>
+      <button class="icon-btn theme-btn" id="theme-toggle" onclick="toggleTheme()" title="Toggle theme">☀️</button>
+      <button class="icon-btn lang-btn" id="lang-toggle" onclick="toggleLang()" title="Language">EN</button>
+      <button class="icon-btn" onclick="confirmLogout()" data-i18n="logOut">logout</button>
     </div>
   </div>
 
   <div class="main">
     <div class="tabs">
-      <div class="tab active" onclick="switchTab('dashboard',this)">Dashboard</div>
-      <div class="tab" onclick="switchTab('orders',this)">Orders</div>
-      <div class="tab" onclick="switchTab('schedule',this)">Production</div>
-      <div class="tab" onclick="switchTab('machines',this)">Machines</div>
-      <div class="tab" onclick="switchTab('history',this)">History</div>
+      <div class="tab active" onclick="switchTab('dashboard',this)" data-i18n="dashboard">Dashboard</div>
+      <div class="tab" onclick="switchTab('orders',this)" data-i18n="orders">Orders</div>
+      <div class="tab" onclick="switchTab('schedule',this)" data-i18n="production">Production</div>
+      <div class="tab" onclick="switchTab('machines',this)" data-i18n="machines">Machines</div>
+      <div class="tab" onclick="switchTab('history',this)" data-i18n="history">History</div>
     </div>
 
     <!-- DASHBOARD -->
@@ -281,43 +312,43 @@ select{width:100%;padding:11px 14px;background:var(--bg);border:1px solid var(--
         <div class="pipe-card p-orders" onclick="switchTabTo('orders')">
           <div class="pipe-icon">📦</div>
           <div class="pipe-val c-warn" id="d-pending">—</div>
-          <div class="pipe-label">Pending Orders</div>
+          <div class="pipe-label" data-i18n="pendingOrders">Pending Orders</div>
         </div>
         <div class="pipe-card p-planned" onclick="switchTabTo('schedule')">
           <div class="pipe-icon">📋</div>
           <div class="pipe-val c-blue" id="d-planned">—</div>
-          <div class="pipe-label">Planned</div>
+          <div class="pipe-label" data-i18n="planned">Planned</div>
         </div>
         <div class="pipe-card p-progress" onclick="switchTabTo('schedule')">
           <div class="pipe-icon">⚡</div>
           <div class="pipe-val c-purple" id="d-inprogress">—</div>
-          <div class="pipe-label">In Progress</div>
+          <div class="pipe-label" data-i18n="inProgress">In Progress</div>
         </div>
         <div class="pipe-card p-done" onclick="switchTabTo('history')">
           <div class="pipe-icon">✓</div>
           <div class="pipe-val c-green" id="d-completed">—</div>
-          <div class="pipe-label">Completed Today</div>
+          <div class="pipe-label" data-i18n="completedToday">Completed Today</div>
         </div>
       </div>
       <!-- Stats -->
       <div class="dash-grid">
-        <div class="dash-card"><div class="dash-label">Active Orders</div><div class="dash-val c-blue" id="d-orders">—</div></div>
-        <div class="dash-card"><div class="dash-label">Total Output Today</div><div class="dash-val c-green" id="d-output">—</div></div>
-        <div class="dash-card"><div class="dash-label">Total Dechet Today</div><div class="dash-val c-warn" id="d-dechet">—</div></div>
-        <div class="dash-card"><div class="dash-label">Machines Active</div><div class="dash-val c-purple" id="d-machines-active">—</div></div>
+        <div class="dash-card"><div class="dash-label" data-i18n="activeOrders">Active Orders</div><div class="dash-val c-blue" id="d-orders">—</div></div>
+        <div class="dash-card"><div class="dash-label" data-i18n="totalOutputToday">Total Output Today</div><div class="dash-val c-green" id="d-output">—</div></div>
+        <div class="dash-card"><div class="dash-label" data-i18n="totalDechetToday">Total Dechet Today</div><div class="dash-val c-warn" id="d-dechet">—</div></div>
+        <div class="dash-card"><div class="dash-label" data-i18n="machinesActive">Machines Active</div><div class="dash-val c-purple" id="d-machines-active">—</div></div>
       </div>
       <div class="dash-row">
         <div class="dash-section">
-          <div class="dash-section-title">Upcoming Schedule (Next 3 Days)</div>
+          <div class="dash-section-title" data-i18n="upcomingSchedule">Upcoming Schedule (Next 3 Days)</div>
           <div id="d-upcoming"></div>
         </div>
         <div class="dash-section">
-          <div class="dash-section-title">Pending Orders</div>
+          <div class="dash-section-title" data-i18n="pendingOrders">Pending Orders</div>
           <div id="d-pending-orders"></div>
         </div>
       </div>
       <div class="dash-section">
-        <div class="dash-section-title">Today's Machine Activity</div>
+        <div class="dash-section-title" data-i18n="todayMachineActivity">Today's Machine Activity</div>
         <div id="d-machines"></div>
       </div>
     </div>
@@ -325,7 +356,7 @@ select{width:100%;padding:11px 14px;background:var(--bg);border:1px solid var(--
     <!-- SCHEDULE -->
     <div class="tab-content" id="tab-schedule">
       <div class="sec-head">
-        <div class="sec-title">Production Schedule</div>
+        <div class="sec-title" data-i18n="productionSchedule">Production Schedule</div>
         <div class="sec-right">
           <input class="search-box" type="text" placeholder="🔍 search..." oninput="filterSearch('schedule',this.value)"/>
           <button class="btn-add" onclick="openModal('schedule',null)">+ Add Schedule</button>
@@ -347,7 +378,7 @@ select{width:100%;padding:11px 14px;background:var(--bg);border:1px solid var(--
     <!-- ORDERS -->
     <div class="tab-content" id="tab-orders">
       <div class="sec-head">
-        <div class="sec-title">Orders</div>
+        <div class="sec-title" data-i18n="orders">Orders</div>
         <div class="sec-right">
           <input class="search-box" type="text" placeholder="🔍 search..." oninput="filterSearch('orders',this.value)"/>
           <button class="btn-add" onclick="openModal('orders',null)">+ Add Order</button>
@@ -370,7 +401,7 @@ select{width:100%;padding:11px 14px;background:var(--bg);border:1px solid var(--
     <!-- MACHINES -->
     <div class="tab-content" id="tab-machines">
       <div class="sec-head">
-        <div class="sec-title">Machine Production Logs</div>
+        <div class="sec-title" data-i18n="machineProductionLogs">Machine Production Logs</div>
         <div class="sec-right">
           <input class="search-box" type="text" placeholder="🔍 search..." oninput="filterSearch('machines',this.value)"/>
           <button class="btn-add" onclick="openModal('machines',null)">+ Log Production</button>
@@ -412,7 +443,7 @@ select{width:100%;padding:11px 14px;background:var(--bg);border:1px solid var(--
     <!-- HISTORY -->
     <div class="tab-content" id="tab-history">
       <div class="sec-head">
-        <div class="sec-title">Production History</div>
+        <div class="sec-title" data-i18n="productionHistory">Production History</div>
         <div class="sec-right">
           <input class="search-box" type="text" placeholder="🔍 search..." oninput="filterSearch('history',this.value)"/>
         </div>
@@ -429,23 +460,23 @@ select{width:100%;padding:11px 14px;background:var(--bg);border:1px solid var(--
   <div class="mobile-nav" id="mobile-nav">
     <button class="mnav-item active" onclick="mnavTab('dashboard',this)">
       <div class="mnav-icon-wrap"><span class="mnav-icon">📊</span></div>
-      <span class="mnav-label">Dashboard</span>
+      <span class="mnav-label" data-i18n="dashboard">Dashboard</span>
     </button>
     <button class="mnav-item" onclick="mnavTab('orders',this)">
       <div class="mnav-icon-wrap"><span class="mnav-icon">📦</span></div>
-      <span class="mnav-label">Orders</span>
+      <span class="mnav-label" data-i18n="orders">Orders</span>
     </button>
     <button class="mnav-item" onclick="mnavTab('schedule',this)">
       <div class="mnav-icon-wrap"><span class="mnav-icon">⚡</span></div>
-      <span class="mnav-label">Production</span>
+      <span class="mnav-label" data-i18n="production">Production</span>
     </button>
     <button class="mnav-item" onclick="mnavTab('machines',this)">
       <div class="mnav-icon-wrap"><span class="mnav-icon">🏭</span></div>
-      <span class="mnav-label">Machines</span>
+      <span class="mnav-label" data-i18n="machines">Machines</span>
     </button>
     <button class="mnav-item" onclick="mnavTab('history',this)">
       <div class="mnav-icon-wrap"><span class="mnav-icon">📜</span></div>
-      <span class="mnav-label">History</span>
+      <span class="mnav-label" data-i18n="history">History</span>
     </button>
   </div>
 </div>
@@ -585,6 +616,80 @@ const SUPABASE_URL = 'https://rvkctesflmkyxfrqeuyd.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_SA__NpN_8UrWyLk3LO5GIA_C9bCUVGW';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+// ─── THEME ───────────────────────────────────────────────
+const DARK_VARS = ':root{--bg:#0a0a0f;--surface:#13131a;--surface2:#1c1c26;--border:#2a2a3a;--accent:#b347ff;--accent2:#47c5ff;--green:#4dffb4;--warn:#ffb347;--danger:#ff5c5c;--text:#f0f0f0;--muted:#777;--radius:10px;--shadow:0 1px 4px rgba(0,0,0,.35),0 0 0 .5px rgba(255,255,255,.04);--shadow-md:0 4px 12px rgba(0,0,0,.5);--shadow-lg:0 10px 28px rgba(0,0,0,.55),0 0 0 .5px rgba(255,255,255,.04);}';
+const LIGHT_VARS = ':root{--bg:#f0f0f5;--surface:#fff;--surface2:#f0f0f5;--border:rgba(60,60,67,.18);--accent:#9333ea;--accent2:#2563eb;--green:#16a34a;--warn:#d97706;--danger:#dc2626;--text:#0f172a;--muted:#64748b;--radius:10px;--shadow:0 1px 4px rgba(0,0,0,.07),0 0 0 .5px rgba(0,0,0,.05);--shadow-md:0 4px 12px rgba(0,0,0,.1);--shadow-lg:0 10px 28px rgba(0,0,0,.12),0 0 0 .5px rgba(0,0,0,.04);}';
+var currentTheme = localStorage.getItem('pb-theme') || 'dark';
+function setTheme(t) {
+  currentTheme = t;
+  document.getElementById('theme-style').textContent = t === 'dark' ? DARK_VARS : LIGHT_VARS;
+  document.documentElement.setAttribute('data-theme', t);
+  const btn = document.getElementById('theme-toggle');
+  if (btn) btn.textContent = t === 'dark' ? '☀️' : '🌙';
+  localStorage.setItem('pb-theme', t);
+  // Update dynamic backgrounds
+  document.body.style.background = t === 'dark' ? '' : 'var(--bg)';
+  const topbar = document.querySelector('.topbar');
+  if (topbar) topbar.style.background = t === 'dark' ? 'rgba(19,19,26,.88)' : 'rgba(240,240,245,.88)';
+  const mobileNav = document.querySelector('.mobile-nav');
+  if (mobileNav) mobileNav.style.background = t === 'dark' ? 'rgba(19,19,26,.92)' : 'rgba(240,240,245,.92)';
+}
+function toggleTheme() { setTheme(currentTheme === 'dark' ? 'light' : 'dark'); }
+
+// ─── i18n ────────────────────────────────────────────────
+var lang = localStorage.getItem('pb-lang') || 'en';
+const I18N = {
+  en: {
+    dashboard: 'Dashboard', orders: 'Orders', production: 'Production', machines: 'Machines', history: 'History',
+    pendingOrders: 'Pending Orders', planned: 'Planned', inProgress: 'In Progress', completedToday: 'Completed Today',
+    activeOrders: 'Active Orders', totalOutputToday: 'Total Output Today', totalDechetToday: 'Total Dechet Today', machinesActive: 'Machines Active',
+    upcomingSchedule: 'Upcoming Schedule (Next 3 Days)', todayMachineActivity: "Today's Machine Activity",
+    productionSchedule: 'Production Schedule', machineProductionLogs: 'Machine Production Logs', productionHistory: 'Production History',
+    addSchedule: '+ Add Schedule', addOrder: '+ Add Order', logProduction: '+ Log Production',
+    logOut: 'logout', logOutQ: 'Log Out?', logOutDesc: 'You will need to enter your PIN again to access the system.', cancel: 'Cancel',
+    manager: 'Manager', employee: 'Employee', yourName: 'YOUR NAME', pinCode: 'PIN CODE', enterSystem: 'Enter System',
+    enterUsername: 'please enter your username', unknownUser: 'unknown username', wrongPin: 'wrong pin',
+    noUpcoming: 'no upcoming schedules', noPending: 'no pending orders',
+    noSchedules: 'no schedules found', noOrders: 'no orders found', noLogs: 'no logs found', noCompleted: 'no completed productions',
+    editSchedule: 'Edit Schedule', editOrder: 'Edit Order', editLog: 'Edit Log',
+    completeProduction: 'Complete Production', markComplete: '✓ Mark Complete',
+    save: 'Save', saving: 'Saving…', deleteConfirm: 'Delete this record? Cannot be undone.',
+    recordUpdated: 'Record updated', recordSaved: 'Record saved', recordDeleted: 'Record deleted',
+    saveFailed: 'Save failed — check connection', prodStarted: 'Production started', prodCompleted: 'Production completed',
+    orderStatus: 'Order', allMachines: 'All Machines',
+  },
+  tr: {
+    dashboard: 'Panel', orders: 'Siparişler', production: 'Üretim', machines: 'Makineler', history: 'Geçmiş',
+    pendingOrders: 'Bekleyen Siparişler', planned: 'Planlanan', inProgress: 'Devam Eden', completedToday: 'Bugün Tamamlanan',
+    activeOrders: 'Aktif Siparişler', totalOutputToday: 'Bugünkü Toplam Üretim', totalDechetToday: 'Bugünkü Toplam Dechet', machinesActive: 'Aktif Makineler',
+    upcomingSchedule: 'Yaklaşan Plan (3 Gün)', todayMachineActivity: 'Bugünkü Makine Aktivitesi',
+    productionSchedule: 'Üretim Planı', machineProductionLogs: 'Makine Üretim Kayıtları', productionHistory: 'Üretim Geçmişi',
+    addSchedule: '+ Plan Ekle', addOrder: '+ Sipariş Ekle', logProduction: '+ Üretim Kaydet',
+    logOut: 'çıkış', logOutQ: 'Çıkış Yap?', logOutDesc: 'Sisteme tekrar erişmek için PIN girmeniz gerekecek.', cancel: 'İptal',
+    manager: 'Yönetici', employee: 'Çalışan', yourName: 'ADINIZ', pinCode: 'PİN KODU', enterSystem: 'Giriş Yap',
+    enterUsername: 'lütfen kullanıcı adınızı girin', unknownUser: 'bilinmeyen kullanıcı', wrongPin: 'yanlış pin',
+    noUpcoming: 'yaklaşan plan yok', noPending: 'bekleyen sipariş yok',
+    noSchedules: 'plan bulunamadı', noOrders: 'sipariş bulunamadı', noLogs: 'kayıt bulunamadı', noCompleted: 'tamamlanan üretim yok',
+    editSchedule: 'Planı Düzenle', editOrder: 'Sipariş Düzenle', editLog: 'Kaydı Düzenle',
+    completeProduction: 'Üretimi Tamamla', markComplete: '✓ Tamamla',
+    save: 'Kaydet', saving: 'Kaydediliyor…', deleteConfirm: 'Bu kaydı silmek istediğinize emin misiniz? Geri alınamaz.',
+    recordUpdated: 'Kayıt güncellendi', recordSaved: 'Kayıt kaydedildi', recordDeleted: 'Kayıt silindi',
+    saveFailed: 'Kayıt başarısız — bağlantıyı kontrol edin', prodStarted: 'Üretim başladı', prodCompleted: 'Üretim tamamlandı',
+    orderStatus: 'Sipariş', allMachines: 'Tüm Makineler',
+  }
+};
+function t(key) { return (I18N[lang] && I18N[lang][key]) || (I18N.en[key]) || key; }
+function setLang(l) {
+  lang = l;
+  localStorage.setItem('pb-lang', l);
+  const btn = document.getElementById('lang-toggle');
+  if (btn) btn.textContent = l === 'tr' ? 'TR' : 'EN';
+  document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = t(el.dataset.i18n); });
+  document.querySelectorAll('[data-i18n-ph]').forEach(el => { el.placeholder = t(el.dataset.i18nPh); });
+  render();
+}
+function toggleLang() { setLang(lang === 'en' ? 'tr' : 'en'); }
+
 const USERS = {
   'ismail': { pin: '7392', role: 'manager' },
   'ali':    { pin: '4851', role: 'manager' },
@@ -611,10 +716,10 @@ function doLogin(){
   const name=document.getElementById('l-name').value.trim().toLowerCase();
   const pin=document.getElementById('l-pin').value.trim();
   const err=document.getElementById('l-err');
-  if(!name){err.textContent='please enter your username';return;}
+  if(!name){err.textContent=t('enterUsername');return;}
   const user=USERS[name];
-  if(!user){err.textContent='unknown username';return;}
-  if(pin!==user.pin){err.textContent='wrong pin';return;}
+  if(!user){err.textContent=t('unknownUser');return;}
+  if(pin!==user.pin){err.textContent=t('wrongPin');return;}
   err.textContent='';
   role=user.role;
   userName=name.charAt(0).toUpperCase()+name.slice(1);
@@ -625,10 +730,22 @@ function doLogin(){
   const rb=document.getElementById('rbadge');
   rb.textContent=role.toUpperCase();
   rb.className='role-badge '+(role==='manager'?'badge-manager':'badge-employee');
+  setTheme(currentTheme);
+  setLang(lang);
   loadAll();
   subscribeRealtime();
 }
 
+function confirmLogout() {
+  document.getElementById('logout-overlay').classList.add('open');
+}
+function closeLogoutOverlay() {
+  document.getElementById('logout-overlay').classList.remove('open');
+}
+function doActualLogout() {
+  closeLogoutOverlay();
+  logout();
+}
 function logout(){
   document.getElementById('login-screen').style.display='flex';
   document.getElementById('app').style.display='none';
@@ -749,12 +866,12 @@ function renderDashboard(){
   const upcoming = schedules.filter(s=>s.date>=today&&s.date<=in3&&s.status!=='done').slice(0,6);
   document.getElementById('d-upcoming').innerHTML = upcoming.length
     ? upcoming.map(s=>`<div class="dash-item"><span>${s.date} · ${esc(s.machine)}</span><span style="color:var(--text)">${esc(s.product)} <span style="color:var(--muted)">(${s.planned_qty})</span></span></div>`).join('')
-    : '<div style="color:var(--muted);font-size:13px;font-family:\'DM Mono\',monospace;padding:12px 0">no upcoming schedules</div>';
+    : `<div style="color:var(--muted);font-size:13px;font-family:'DM Mono',monospace;padding:12px 0">${t('noUpcoming')}</div>`;
 
   const pendingOrders = orders.filter(o=>o.status==='pending').slice(0,6);
   document.getElementById('d-pending-orders').innerHTML = pendingOrders.length
     ? pendingOrders.map(o=>`<div class="dash-item"><span>${esc(o.order_no)} · ${esc(o.customer)}</span><span style="color:var(--text)">${esc(o.product)} <span style="color:var(--muted)">(${o.qty} ${esc(o.unit||'')})</span></span></div>`).join('')
-    : '<div style="color:var(--muted);font-size:13px;font-family:\'DM Mono\',monospace;padding:12px 0">no pending orders</div>';
+    : `<div style="color:var(--muted);font-size:13px;font-family:'DM Mono',monospace;padding:12px 0">${t('noPending')}</div>`;
 
   const machines = ['Machine 1','Machine 2','Machine 3','Machine 4','Machine 5'];
   document.getElementById('d-machines').innerHTML = `<div class="dash-machine-grid">
@@ -778,7 +895,7 @@ function renderSchedule(){
   let items=[...schedules];
   if(filters.schedule!=='all') items=items.filter(s=>s.status===filters.schedule);
   if(searches.schedule) items=items.filter(s=>(s.product+s.machine+s.notes).toLowerCase().includes(searches.schedule));
-  if(!items.length){tbody.innerHTML=`<tr><td colspan="11"><div class="empty">no schedules found</div></td></tr>`;document.getElementById('cards-schedule').innerHTML='<div class="empty">no schedules found</div>';return;}
+  if(!items.length){tbody.innerHTML=`<tr><td colspan="11"><div class="empty">${t('noSchedules')}</div></td></tr>`;document.getElementById('cards-schedule').innerHTML=`<div class="empty">${t('noSchedules')}</div>`;return;}
   tbody.innerHTML=items.map(s=>{
     let acts=`<button class="btn-s b-edit" onclick="openModal('schedule','${s.id}')">Edit</button><button class="btn-s b-del" onclick="deleteRecord('production_schedule','${s.id}')">Del</button>`;
     if(s.status==='planned') acts+=`<button class="btn-s b-start" onclick="startProduction('${s.id}')">▶ Start</button>`;
@@ -820,7 +937,7 @@ function renderOrders(){
   let items=[...orders];
   if(filters.orders!=='all') items=items.filter(o=>o.status===filters.orders);
   if(searches.orders) items=items.filter(o=>(o.order_no+o.customer+o.product+o.notes).toLowerCase().includes(searches.orders));
-  if(!items.length){tbody.innerHTML=`<tr><td colspan="10"><div class="empty">no orders found</div></td></tr>`;document.getElementById('cards-orders').innerHTML='<div class="empty">no orders found</div>';return;}
+  if(!items.length){tbody.innerHTML=`<tr><td colspan="10"><div class="empty">${t('noOrders')}</div></td></tr>`;document.getElementById('cards-orders').innerHTML=`<div class="empty">${t('noOrders')}</div>`;return;}
   tbody.innerHTML=items.map(o=>{
     let acts=`<button class="btn-s b-edit" onclick="openModal('orders','${o.id}')">Edit</button><button class="btn-s b-del" onclick="deleteRecord('orders','${o.id}')">Del</button>`;
     // Production progress for this order
@@ -910,7 +1027,7 @@ function renderMachines(){
   let items=[...machineLogs];
   if(machineFilter!=='all') items=items.filter(l=>l.machine===machineFilter);
   if(searches.machines) items=items.filter(l=>(l.product+l.raw_material+l.machine+l.operator).toLowerCase().includes(searches.machines));
-  if(!items.length){tbody.innerHTML=`<tr><td colspan="11"><div class="empty">no logs found</div></td></tr>`;document.getElementById('cards-machines').innerHTML='<div class="empty">no logs found</div>';return;}
+  if(!items.length){tbody.innerHTML=`<tr><td colspan="11"><div class="empty">${t('noLogs')}</div></td></tr>`;document.getElementById('cards-machines').innerHTML=`<div class="empty">${t('noLogs')}</div>`;return;}
   tbody.innerHTML=items.map(m=>`<tr>
     <td>${m.date}</td>
     <td style="color:var(--accent)">${esc(m.machine)}</td>
@@ -1012,9 +1129,9 @@ async function doComplete(){
     }
     closeCompleteModal();
     await loadAll();
-    showToast('Production completed','success');
-  }catch(e){showToast('Save failed — check connection','error');}
-  btn.disabled=false;btn.textContent='✓ Mark Complete';
+    showToast(t('prodCompleted'),'success');
+  }catch(e){showToast(t('saveFailed'),'error');}
+  btn.disabled=false;btn.textContent=t('markComplete');
 }
 
 // ── HISTORY ────────────────────────────────────────────
@@ -1022,7 +1139,7 @@ function renderHistory(){
   const tbody=document.getElementById('tb-history');
   let items=schedules.filter(s=>s.status==='done');
   if(searches.history) items=items.filter(s=>((s.product||'')+(s.machine||'')+(s.notes||'')+(s.variance_notes||'')).toLowerCase().includes(searches.history));
-  if(!items.length){tbody.innerHTML=`<tr><td colspan="11"><div class="empty">no completed productions</div></td></tr>`;document.getElementById('cards-history').innerHTML='<div class="empty">no completed productions</div>';return;}
+  if(!items.length){tbody.innerHTML=`<tr><td colspan="11"><div class="empty">${t('noCompleted')}</div></td></tr>`;document.getElementById('cards-history').innerHTML=`<div class="empty">${t('noCompleted')}</div>`;return;}
   tbody.innerHTML=items.map(s=>{
     const diff=(s.actual_qty!=null&&s.planned_qty!=null)?(s.actual_qty-s.planned_qty):null;
     const diffStr=diff!=null?(diff>=0?'+':'')+diff:'—';
@@ -1181,16 +1298,16 @@ async function saveRecord(type){
     }
     closeModal(type);
     await loadAll();
-    showToast(editId?'Record updated':'Record saved','success');
-  } catch(e){showToast('Save failed — check connection','error');}
+    showToast(editId?t('recordUpdated'):t('recordSaved'),'success');
+  } catch(e){showToast(t('saveFailed'),'error');}
   btn.disabled=false; btn.textContent='Save';
 }
 
 async function deleteRecord(table,id){
-  if(!confirm('Delete this record? Cannot be undone.')) return;
+  if(!confirm(t('deleteConfirm'))) return;
   await sb.from(table).delete().eq('id',id);
   await loadAll();
-  showToast('Record deleted','info');
+  showToast(t('recordDeleted'),'info');
 }
 
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
