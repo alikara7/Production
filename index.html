@@ -239,11 +239,7 @@ select{width:100%;padding:11px 14px;background:var(--bg);border:1px solid var(--
   <div class="login-box">
     <div class="login-logo">Prod<span>Base</span></div>
     <div class="login-sub">// production management · live sync</div>
-    <div class="role-select">
-      <button class="role-btn active" onclick="selRole('manager',this)">Manager</button>
-      <button class="role-btn" onclick="selRole('employee',this)">Employee</button>
-    </div>
-    <div class="f-row"><label>YOUR NAME</label><input type="text" id="l-name" placeholder="e.g. Ahmet"/></div>
+    <div class="f-row"><label>USERNAME</label><input type="text" id="l-name" placeholder="Enter username" autocomplete="username"/></div>
     <div class="f-row"><label>PIN CODE</label><input type="password" id="l-pin" placeholder="••••" maxlength="6" onkeydown="if(event.key==='Enter')doLogin()"/></div>
     <button class="btn-primary" onclick="doLogin()">Enter System</button>
     <div class="login-error" id="l-err"></div>
@@ -585,8 +581,13 @@ const SUPABASE_URL = 'https://rvkctesflmkyxfrqeuyd.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_SA__NpN_8UrWyLk3LO5GIA_C9bCUVGW';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-const MANAGER_PIN  = '1357';
-const EMPLOYEE_PIN = '0000';
+const USERS = {
+  'ismail': { pin: '7392', role: 'manager' },
+  'ali':    { pin: '4851', role: 'manager' },
+  'salih':  { pin: '2647', role: 'employee' },
+  'kadir':  { pin: '9035', role: 'employee' },
+  'buse':   { pin: '5180', role: 'manager' },
+};
 
 let role = 'manager', userName = '';
 let schedules = [], orders = [], machineLogs = [];
@@ -597,21 +598,17 @@ let machineFilter = 'all';
 
 function setSync(s,t){document.getElementById('sdot').className='sync-dot '+s;document.getElementById('stxt').textContent=t;}
 
-function selRole(r,btn){
-  role=r;
-  document.querySelectorAll('.role-btn').forEach(b=>b.classList.remove('active'));
-  btn.classList.add('active');
-}
-
 function doLogin(){
-  const name=document.getElementById('l-name').value.trim();
+  const name=document.getElementById('l-name').value.trim().toLowerCase();
   const pin=document.getElementById('l-pin').value.trim();
   const err=document.getElementById('l-err');
-  if(!name){err.textContent='please enter your name';return;}
-  if(role==='manager'&&pin!==MANAGER_PIN){err.textContent='wrong pin';return;}
-  if(role==='employee'&&pin!==EMPLOYEE_PIN){err.textContent='wrong pin';return;}
+  if(!name){err.textContent='please enter your username';return;}
+  const user=USERS[name];
+  if(!user){err.textContent='unknown username';return;}
+  if(pin!==user.pin){err.textContent='wrong pin';return;}
   err.textContent='';
-  userName=name;
+  role=user.role;
+  userName=name.charAt(0).toUpperCase()+name.slice(1);
   document.getElementById('login-screen').style.display='none';
   document.getElementById('app').style.display='block';
   document.getElementById('uname').textContent=name;
