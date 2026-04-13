@@ -371,7 +371,7 @@ select{width:100%;padding:11px 14px;background:var(--bg);border:1px solid var(--
         <button class="fpill" onclick="filterStatus('schedule','done',this)">Done</button>
       </div>
       <div class="table-wrap"><table>
-        <thead><tr><th>DATE</th><th>PLAN START</th><th>MACHINE</th><th>PRODUCT</th><th>ORDER</th><th>PLAN QTY</th><th>ACT QTY</th><th>STATUS</th><th>HOURS</th><th>NOTES</th><th>BY</th><th>ACTIONS</th></tr></thead>
+        <thead><tr><th>DATE</th><th>PLAN START</th><th>MACHINE</th><th>PRODUCT</th><th>ORDER</th><th>PLAN QTY</th><th>ACT QTY</th><th>STATUS</th><th>DECHET</th><th>HOURS</th><th>NOTES</th><th>BY</th><th>ACTIONS</th></tr></thead>
         <tbody id="tb-schedule"></tbody>
       </table></div>
       <div class="card-list" id="cards-schedule"></div>
@@ -921,7 +921,7 @@ function renderSchedule(){
   let items=[...schedules];
   if(filters.schedule!=='all') items=items.filter(s=>s.status===filters.schedule);
   if(searches.schedule) items=items.filter(s=>(s.product+s.machine+s.notes).toLowerCase().includes(searches.schedule));
-  if(!items.length){tbody.innerHTML=`<tr><td colspan="12"><div class="empty">${t('noSchedules')}</div></td></tr>`;document.getElementById('cards-schedule').innerHTML=`<div class="empty">${t('noSchedules')}</div>`;return;}
+  if(!items.length){tbody.innerHTML=`<tr><td colspan="13"><div class="empty">${t('noSchedules')}</div></td></tr>`;document.getElementById('cards-schedule').innerHTML=`<div class="empty">${t('noSchedules')}</div>`;return;}
   tbody.innerHTML=items.map(s=>{
     let acts=`<button class="btn-s b-edit" onclick="openModal('schedule','${s.id}')">Edit</button><button class="btn-s b-del" onclick="deleteRecord('production_schedule','${s.id}')">Del</button>`;
     if(s.status==='planned') acts+=`<button class="btn-s b-start" onclick="startProduction('${s.id}')">▶ Start</button>`;
@@ -942,8 +942,9 @@ function renderSchedule(){
       <td style="font-weight:600">${esc(s.product)}</td>
       <td style="color:var(--accent)">${orderLabel}</td>
       <td>${s.planned_qty}</td>
-      <td style="${qd?'color:var(--warn);font-weight:600':''}">${aq}${dechetInfo}</td>
+      <td style="${qd?'color:var(--warn);font-weight:600':''}">${aq}</td>
       <td><span class="sbadge s-${s.status}">${s.status}</span></td>
+      <td style="color:var(--warn)">${s.status==='done'?(sDec!=null?sDec:'—'):'—'}</td>
       <td style="color:var(--muted)">${s.status==='done'?(sHrs!=null?sHrs+'h':'—'):'—'}</td>
       <td style="color:var(--muted);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(s.notes||'—')}</td>
       <td style="color:var(--muted)">${esc(s.created_by||'—')}</td>
