@@ -371,7 +371,7 @@ select{width:100%;padding:11px 14px;background:var(--bg);border:1px solid var(--
         <button class="fpill" onclick="filterStatus('schedule','done',this)">Done</button>
       </div>
       <div class="table-wrap"><table>
-        <thead><tr><th>DATE</th><th>PLAN START</th><th>MACHINE</th><th>PRODUCT</th><th>ORDER</th><th>PLAN QTY</th><th>ACT QTY</th><th>STATUS</th><th>NOTES</th><th>BY</th><th>ACTIONS</th></tr></thead>
+        <thead><tr><th>DATE</th><th>PLAN START</th><th>MACHINE</th><th>PRODUCT</th><th>ORDER</th><th>PLAN QTY</th><th>ACT QTY</th><th>STATUS</th><th>HOURS</th><th>NOTES</th><th>BY</th><th>ACTIONS</th></tr></thead>
         <tbody id="tb-schedule"></tbody>
       </table></div>
       <div class="card-list" id="cards-schedule"></div>
@@ -917,14 +917,14 @@ function renderSchedule(){
   let items=[...schedules];
   if(filters.schedule!=='all') items=items.filter(s=>s.status===filters.schedule);
   if(searches.schedule) items=items.filter(s=>(s.product+s.machine+s.notes).toLowerCase().includes(searches.schedule));
-  if(!items.length){tbody.innerHTML=`<tr><td colspan="11"><div class="empty">${t('noSchedules')}</div></td></tr>`;document.getElementById('cards-schedule').innerHTML=`<div class="empty">${t('noSchedules')}</div>`;return;}
+  if(!items.length){tbody.innerHTML=`<tr><td colspan="12"><div class="empty">${t('noSchedules')}</div></td></tr>`;document.getElementById('cards-schedule').innerHTML=`<div class="empty">${t('noSchedules')}</div>`;return;}
   tbody.innerHTML=items.map(s=>{
     let acts=`<button class="btn-s b-edit" onclick="openModal('schedule','${s.id}')">Edit</button><button class="btn-s b-del" onclick="deleteRecord('production_schedule','${s.id}')">Del</button>`;
     if(s.status==='planned') acts+=`<button class="btn-s b-start" onclick="startProduction('${s.id}')">▶ Start</button>`;
     if(s.status==='inprogress') acts+=`<button class="btn-s b-complete" onclick="openCompleteModal('${s.id}')">✓ Done</button>`;
     const aq=s.actual_qty!=null?s.actual_qty:'—';
     const qd=s.actual_qty!=null&&s.planned_qty!=null&&s.actual_qty!==s.planned_qty;
-    const dechetInfo=s.status==='done'&&s.dechet?` <span style="color:var(--warn);font-size:11px">(d:${s.dechet})</span>`:'';
+    const dechetInfo=s.status==='done'&&s.dechet!=null?` <span style="color:var(--warn);font-size:11px">(d:${s.dechet})</span>`:'';
     const linkedOrder=s.order_id?orders.find(o=>o.id===s.order_id):null;
     const orderLabel=linkedOrder?esc(linkedOrder.order_no):'—';
     return `<tr>
@@ -936,6 +936,7 @@ function renderSchedule(){
       <td>${s.planned_qty}</td>
       <td style="${qd?'color:var(--warn);font-weight:600':''}">${aq}${dechetInfo}</td>
       <td><span class="sbadge s-${s.status}">${s.status}</span></td>
+      <td style="color:var(--muted)">${s.status==='done'?(s.work_hours!=null?s.work_hours+'h':'—'):'—'}</td>
       <td style="color:var(--muted);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(s.notes||'—')}</td>
       <td style="color:var(--muted)">${esc(s.created_by||'—')}</td>
       <td><div class="acts">${acts}</div></td>
@@ -948,7 +949,7 @@ function renderSchedule(){
     if(s.status==='inprogress') acts+=`<button class="btn-s b-complete" onclick="openCompleteModal('${s.id}')">✓ Done</button>`;
     return `<div class="item-card">
       <div class="ic-top"><div><div class="ic-name">${esc(s.product)}</div><div class="ic-sub">${esc(s.machine)} · ${s.date}</div></div><span class="sbadge s-${s.status}">${s.status}</span></div>
-      <div class="ic-mid"><div class="ic-field"><label>PLAN QTY</label><span>${s.planned_qty}</span></div><div class="ic-field"><label>ACT QTY</label><span>${s.actual_qty!=null?s.actual_qty:'—'}</span></div>${s.status==='done'&&s.dechet?`<div class="ic-field"><label>DECHET</label><span style="color:var(--warn)">${s.dechet}</span></div>`:''}<div class="ic-field"><label>ORDER</label><span style="color:var(--accent)">${s.order_id?esc((orders.find(o=>o.id===s.order_id)||{}).order_no||'—'):'—'}</span></div></div>
+      <div class="ic-mid"><div class="ic-field"><label>PLAN QTY</label><span>${s.planned_qty}</span></div><div class="ic-field"><label>ACT QTY</label><span>${s.actual_qty!=null?s.actual_qty:'—'}</span></div>${s.status==='done'&&s.dechet!=null?`<div class="ic-field"><label>DECHET</label><span style="color:var(--warn)">${s.dechet}</span></div>`:''}<div class="ic-field"><label>ORDER</label><span style="color:var(--accent)">${s.order_id?esc((orders.find(o=>o.id===s.order_id)||{}).order_no||'—'):'—'}</span></div></div>
       <div class="ic-actions">${acts}</div>
     </div>`;
   }).join('');
@@ -1175,10 +1176,7 @@ function renderHistory(){
     const diffColor=diff!=null?(diff<0?'var(--danger)':diff>0?'var(--green)':'var(--muted)'):'var(--muted)';
     const startStr=s.actual_start?s.actual_start.split('T')[0]:'—';
     const endStr=s.actual_end?s.actual_end.split('T')[0]:'—';
-    const durStr=s.work_hours!=null?s.work_hours+'h':'—';
-    return `<tr>
-      <td>${s.date}</td>
-      <td style="color:var(--accent2)">${esc(s.machine)}</td>
+    const durStr=s.work_hours!=null?s.work_hours+'h':(s.actual_start&&s.actual_end&&s.actual_start.includes('T')&&s.actual_end.includes('T')?Math.round((new Date(s.actual_end)-new Date(s.actual_start))/36e5*10)/10+'h':'—');
       <td style="font-weight:600">${esc(s.product)}</td>
       <td>${s.planned_qty||0}</td>
       <td style="font-weight:600">${s.actual_qty!=null?s.actual_qty:'—'}</td>
@@ -1198,7 +1196,7 @@ function renderHistory(){
     const diffColor=diff!=null?(diff<0?'var(--danger)':diff>0?'var(--green)':'var(--muted)'):'var(--muted)';
     const startStr=s.actual_start?s.actual_start.split('T')[0]:'—';
     const endStr=s.actual_end?s.actual_end.split('T')[0]:'—';
-    const durStr=s.work_hours!=null?s.work_hours+'h':'—';
+    const durStr=s.work_hours!=null?s.work_hours+'h':(s.actual_start&&s.actual_end&&s.actual_start.includes('T')&&s.actual_end.includes('T')?Math.round((new Date(s.actual_end)-new Date(s.actual_start))/36e5*10)/10+'h':'—');
     return `<div class="item-card">
       <div class="ic-top"><div><div class="ic-name">${esc(s.product)}</div><div class="ic-sub">${esc(s.machine)} · ${s.date}</div></div><span class="sbadge s-done">done</span></div>
       <div class="ic-mid"><div class="ic-field"><label>PLANNED</label><span>${s.planned_qty||0}</span></div><div class="ic-field"><label>ACTUAL</label><span style="font-weight:700">${s.actual_qty!=null?s.actual_qty:'—'}</span></div><div class="ic-field"><label>DIFF</label><span style="color:${diffColor};font-weight:700">${diffStr}</span></div><div class="ic-field"><label>DECHET</label><span style="color:var(--accent2)">${s.dechet!=null?s.dechet:'—'}</span></div><div class="ic-field"><label>START</label><span>${startStr}</span></div><div class="ic-field"><label>END</label><span>${endStr}</span></div><div class="ic-field"><label>HOURS</label><span style="color:var(--accent)">${durStr}</span></div></div>
