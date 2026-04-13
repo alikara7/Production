@@ -714,7 +714,7 @@ function selRole(r,btn){
 }
 
 function doLogin(){
-  const name=document.getElementById('l-name').value.trim().toLowerCase();
+  const name=document.getElementById('l-name').value.trim().toLocaleLowerCase('tr');
   const pin=document.getElementById('l-pin').value.trim();
   const err=document.getElementById('l-err');
   if(!name){err.textContent=t('enterUsername');return;}
