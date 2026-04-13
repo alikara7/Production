@@ -410,11 +410,7 @@ select{width:100%;padding:11px 14px;background:var(--bg);border:1px solid var(--
         </div>
       </div>
       <div class="machine-grid">
-        <div class="machine-card active" id="mc-all" onclick="filterMachine('all',this)">
-          <div class="machine-name">All Machines</div>
-          <div class="machine-stat" id="ms-all">— logs</div>
-        </div>
-        <div class="machine-card" id="mc-1" onclick="filterMachine('Inpak 1',this)">
+        <div class="machine-card active" id="mc-1" onclick="filterMachine('Inpak 1',this)">
           <div class="machine-name">Inpak 1</div>
           <div class="machine-stat" id="ms-1">— logs</div>
         </div>
@@ -716,7 +712,7 @@ let schedules = [], orders = [], machineLogs = [];
 let editType = null, editId = null;
 let filters = { schedule: 'planned', orders: 'all', machines: 'all' };
 let searches = { schedule: '', orders: '', machines: '', history: '' };
-let machineFilter = 'all';
+let machineFilter = 'Inpak 1';
 
 function setSync(s,t){document.getElementById('sdot').className='sync-dot '+s;document.getElementById('stxt').textContent=t;}
 
@@ -1057,7 +1053,7 @@ function renderMachines(){
     const el=document.getElementById('ms-'+key);
     if(el) el.textContent=count+' log'+(count!==1?'s':'');
   });
-  document.getElementById('ms-all').textContent=machineLogs.length+' total';
+  document.getElementById('ms-all')&&(document.getElementById('ms-all').textContent=machineLogs.length+' total');
 
   let items=[...machineLogs];
   if(machineFilter!=='all') items=items.filter(l=>l.machine===machineFilter);
