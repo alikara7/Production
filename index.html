@@ -622,7 +622,11 @@ select{width:100%;padding:11px 14px;background:var(--bg);border:1px solid var(--
 <script>
 const SUPABASE_URL = 'https://rvkctesflmkyxfrqeuyd.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_SA__NpN_8UrWyLk3LO5GIA_C9bCUVGW';
-const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+let sb;
+try { sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY); } catch(e) {
+  console.warn('Supabase init failed, retrying…');
+  setTimeout(()=>{ try { sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY); } catch(e2){} }, 1500);
+}
 
 // ─── THEME ───────────────────────────────────────────────
 const DARK_VARS = ':root{--bg:#0a0a0f;--surface:#13131a;--surface2:#1c1c26;--border:#2a2a3a;--accent:#b347ff;--accent2:#47c5ff;--green:#4dffb4;--warn:#ffb347;--danger:#ff5c5c;--text:#f0f0f0;--muted:#777;--radius:10px;--shadow:0 1px 4px rgba(0,0,0,.35),0 0 0 .5px rgba(255,255,255,.04);--shadow-md:0 4px 12px rgba(0,0,0,.5);--shadow-lg:0 10px 28px rgba(0,0,0,.55),0 0 0 .5px rgba(255,255,255,.04);}';
@@ -1174,14 +1178,21 @@ function renderHistory(){
     const diff=(s.actual_qty!=null&&s.planned_qty!=null)?(s.actual_qty-s.planned_qty):null;
     const diffStr=diff!=null?(diff>=0?'+':'')+diff:'—';
     const diffColor=diff!=null?(diff<0?'var(--danger)':diff>0?'var(--green)':'var(--muted)'):'var(--muted)';
+    // Cross-reference machine_logs for dechet & hours fallback
+    const matchLog=machineLogs.find(m=>m.machine===s.machine&&m.product===s.product&&m.date===(s.actual_end?s.actual_end.split('T')[0]:s.date));
+    const dechetVal=s.dechet!=null?s.dechet:(matchLog?matchLog.dechet:null);
+    const hoursVal=s.work_hours!=null?s.work_hours:(matchLog&&matchLog.hours!=null?matchLog.hours:null);
     const startStr=s.actual_start?s.actual_start.split('T')[0]:'—';
     const endStr=s.actual_end?s.actual_end.split('T')[0]:'—';
-    const durStr=s.work_hours!=null?s.work_hours+'h':(s.actual_start&&s.actual_end&&s.actual_start.includes('T')&&s.actual_end.includes('T')?Math.round((new Date(s.actual_end)-new Date(s.actual_start))/36e5*10)/10+'h':'—');
+    const durStr=hoursVal!=null?hoursVal+'h':(s.actual_start&&s.actual_end&&s.actual_start.includes('T')&&s.actual_end.includes('T')?Math.round((new Date(s.actual_end)-new Date(s.actual_start))/36e5*10)/10+'h':'—');
+    return `<tr>
+      <td>${s.date}</td>
+      <td style="color:var(--accent2)">${esc(s.machine)}</td>
       <td style="font-weight:600">${esc(s.product)}</td>
       <td>${s.planned_qty||0}</td>
       <td style="font-weight:600">${s.actual_qty!=null?s.actual_qty:'—'}</td>
       <td style="color:${diffColor};font-weight:600">${diffStr}</td>
-      <td style="color:var(--accent2)">${s.dechet!=null?s.dechet:'—'}</td>
+      <td style="color:var(--accent2)">${dechetVal!=null?dechetVal:'—'}</td>
       <td style="color:var(--muted)">${startStr}</td>
       <td style="color:var(--muted)">${endStr}</td>
       <td style="color:var(--accent)">${durStr}</td>
@@ -1194,12 +1205,16 @@ function renderHistory(){
     const diff=(s.actual_qty!=null&&s.planned_qty!=null)?(s.actual_qty-s.planned_qty):null;
     const diffStr=diff!=null?(diff>=0?'+':'')+diff:'—';
     const diffColor=diff!=null?(diff<0?'var(--danger)':diff>0?'var(--green)':'var(--muted)'):'var(--muted)';
+    // Cross-reference machine_logs for dechet & hours fallback (mobile cards)
+    const matchLog2=machineLogs.find(m=>m.machine===s.machine&&m.product===s.product&&m.date===(s.actual_end?s.actual_end.split('T')[0]:s.date));
+    const dechetVal2=s.dechet!=null?s.dechet:(matchLog2?matchLog2.dechet:null);
+    const hoursVal2=s.work_hours!=null?s.work_hours:(matchLog2&&matchLog2.hours!=null?matchLog2.hours:null);
     const startStr=s.actual_start?s.actual_start.split('T')[0]:'—';
     const endStr=s.actual_end?s.actual_end.split('T')[0]:'—';
-    const durStr=s.work_hours!=null?s.work_hours+'h':(s.actual_start&&s.actual_end&&s.actual_start.includes('T')&&s.actual_end.includes('T')?Math.round((new Date(s.actual_end)-new Date(s.actual_start))/36e5*10)/10+'h':'—');
+    const durStr=hoursVal2!=null?hoursVal2+'h':(s.actual_start&&s.actual_end&&s.actual_start.includes('T')&&s.actual_end.includes('T')?Math.round((new Date(s.actual_end)-new Date(s.actual_start))/36e5*10)/10+'h':'—');
     return `<div class="item-card">
       <div class="ic-top"><div><div class="ic-name">${esc(s.product)}</div><div class="ic-sub">${esc(s.machine)} · ${s.date}</div></div><span class="sbadge s-done">done</span></div>
-      <div class="ic-mid"><div class="ic-field"><label>PLANNED</label><span>${s.planned_qty||0}</span></div><div class="ic-field"><label>ACTUAL</label><span style="font-weight:700">${s.actual_qty!=null?s.actual_qty:'—'}</span></div><div class="ic-field"><label>DIFF</label><span style="color:${diffColor};font-weight:700">${diffStr}</span></div><div class="ic-field"><label>DECHET</label><span style="color:var(--accent2)">${s.dechet!=null?s.dechet:'—'}</span></div><div class="ic-field"><label>START</label><span>${startStr}</span></div><div class="ic-field"><label>END</label><span>${endStr}</span></div><div class="ic-field"><label>HOURS</label><span style="color:var(--accent)">${durStr}</span></div></div>
+      <div class="ic-mid"><div class="ic-field"><label>PLANNED</label><span>${s.planned_qty||0}</span></div><div class="ic-field"><label>ACTUAL</label><span style="font-weight:700">${s.actual_qty!=null?s.actual_qty:'—'}</span></div><div class="ic-field"><label>DIFF</label><span style="color:${diffColor};font-weight:700">${diffStr}</span></div><div class="ic-field"><label>DECHET</label><span style="color:var(--accent2)">${dechetVal2!=null?dechetVal2:'—'}</span></div><div class="ic-field"><label>START</label><span>${startStr}</span></div><div class="ic-field"><label>END</label><span>${endStr}</span></div><div class="ic-field"><label>HOURS</label><span style="color:var(--accent)">${durStr}</span></div></div>
       ${s.variance_notes||s.notes?`<div style="font-size:12px;color:var(--muted);font-family:'DM Mono',monospace;padding:0 2px">${esc(s.variance_notes||s.notes)}</div>`:''}
     </div>`;
   }).join('');
