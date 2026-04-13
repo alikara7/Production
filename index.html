@@ -449,7 +449,7 @@ select{width:100%;padding:11px 14px;background:var(--bg);border:1px solid var(--
         </div>
       </div>
       <div class="table-wrap"><table>
-        <thead><tr><th>DATE</th><th>MACHINE</th><th>PRODUCT</th><th>PLANNED</th><th>ACTUAL</th><th>DIFF</th><th>START</th><th>END</th><th>DURATION</th><th>BY</th><th>NOTES</th></tr></thead>
+        <thead><tr><th>DATE</th><th>MACHINE</th><th>PRODUCT</th><th>PLANNED</th><th>ACTUAL</th><th>DIFF</th><th>DECHET</th><th>START</th><th>END</th><th>DURATION</th><th>BY</th><th>NOTES</th></tr></thead>
         <tbody id="tb-history"></tbody>
       </table></div>
       <div class="card-list" id="cards-history"></div>
@@ -846,15 +846,26 @@ function render(){
 }
 
 // ── DASHBOARD ──────────────────────────────────────────
+function todayLocal(){
+  const n=new Date();
+  return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0');
+}
 function renderDashboard(){
-  const today = new Date().toISOString().split('T')[0];
-  const in3   = new Date(Date.now()+3*864e5).toISOString().split('T')[0];
+  const today = todayLocal();
+  const in3d  = new Date(Date.now()+3*864e5);
+  const in3   = in3d.getFullYear()+'-'+String(in3d.getMonth()+1).padStart(2,'0')+'-'+String(in3d.getDate()).padStart(2,'0');
 
   // Pipeline cards
   document.getElementById('d-pending').textContent   = orders.filter(o=>o.status==='pending').length;
   document.getElementById('d-planned').textContent    = schedules.filter(s=>s.status==='planned').length;
   document.getElementById('d-inprogress').textContent = schedules.filter(s=>s.status==='inprogress').length;
-  document.getElementById('d-completed').textContent  = schedules.filter(s=>s.status==='done'&&s.actual_end&&s.actual_end.startsWith(today)).length;
+  // Completed today: check actual_end local date
+  document.getElementById('d-completed').textContent  = schedules.filter(s=>{
+    if(s.status!=='done'||!s.actual_end) return false;
+    const d=new Date(s.actual_end);
+    const ds=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+    return ds===today;
+  }).length;
 
   // Stat cards
   document.getElementById('d-orders').textContent     = orders.filter(o=>o.status==='pending'||o.status==='inprogress').length;
@@ -1108,14 +1119,15 @@ async function doComplete(){
   const item=schedules.find(s=>s.id===id);
   try{
     await sb.from('production_schedule').update({
-      status:'done',actual_end:now,actual_qty:actualQty,variance_notes:varianceNotes
+      status:'done',actual_end:now,actual_qty:actualQty,variance_notes:varianceNotes,
+      dechet:dechet,raw_material:rawMat,raw_material_used:rawAmt
     }).eq('id',id);
     // Auto-create machine log on completion with calculated dechet
     if(item){
       const hours=item.actual_start?Math.round((new Date(now)-new Date(item.actual_start))/36e5*10)/10:0;
       const created_at=new Date().toLocaleDateString('tr-TR')+' '+new Date().toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'});
       await sb.from('machine_logs').insert({
-        id:uid(),date:item.date,machine:item.machine,operator:userName,
+        id:uid(),date:todayLocal(),machine:item.machine,operator:userName,
         product:item.product,raw_material:rawMat,raw_material_used:rawAmt,
         hours:hours,output:actualQty,dechet:dechet,
         notes:varianceNotes||item.notes||'',
@@ -1141,7 +1153,7 @@ function renderHistory(){
   const tbody=document.getElementById('tb-history');
   let items=schedules.filter(s=>s.status==='done');
   if(searches.history) items=items.filter(s=>((s.product||'')+(s.machine||'')+(s.notes||'')+(s.variance_notes||'')).toLowerCase().includes(searches.history));
-  if(!items.length){tbody.innerHTML=`<tr><td colspan="11"><div class="empty">${t('noCompleted')}</div></td></tr>`;document.getElementById('cards-history').innerHTML=`<div class="empty">${t('noCompleted')}</div>`;return;}
+  if(!items.length){tbody.innerHTML=`<tr><td colspan="12"><div class="empty">${t('noCompleted')}</div></td></tr>`;document.getElementById('cards-history').innerHTML=`<div class="empty">${t('noCompleted')}</div>`;return;}
   tbody.innerHTML=items.map(s=>{
     const diff=(s.actual_qty!=null&&s.planned_qty!=null)?(s.actual_qty-s.planned_qty):null;
     const diffStr=diff!=null?(diff>=0?'+':'')+diff:'—';
@@ -1157,6 +1169,7 @@ function renderHistory(){
       <td>${s.planned_qty||0}</td>
       <td style="font-weight:600">${s.actual_qty!=null?s.actual_qty:'—'}</td>
       <td style="color:${diffColor};font-weight:600">${diffStr}</td>
+      <td style="color:var(--accent2)">${s.dechet!=null?s.dechet:'—'}</td>
       <td style="color:var(--muted)">${startStr}</td>
       <td style="color:var(--muted)">${endStr}</td>
       <td style="color:var(--accent)">${durStr}</td>
@@ -1176,7 +1189,7 @@ function renderHistory(){
     if(s.actual_end){endStr=new Date(s.actual_end).toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'});}
     return `<div class="item-card">
       <div class="ic-top"><div><div class="ic-name">${esc(s.product)}</div><div class="ic-sub">${esc(s.machine)} · ${s.date}</div></div><span class="sbadge s-done">done</span></div>
-      <div class="ic-mid"><div class="ic-field"><label>PLANNED</label><span>${s.planned_qty||0}</span></div><div class="ic-field"><label>ACTUAL</label><span style="font-weight:700">${s.actual_qty!=null?s.actual_qty:'—'}</span></div><div class="ic-field"><label>DIFF</label><span style="color:${diffColor};font-weight:700">${diffStr}</span></div><div class="ic-field"><label>START</label><span>${startStr}</span></div><div class="ic-field"><label>END</label><span>${endStr}</span></div><div class="ic-field"><label>DURATION</label><span style="color:var(--accent)">${durStr}</span></div></div>
+      <div class="ic-mid"><div class="ic-field"><label>PLANNED</label><span>${s.planned_qty||0}</span></div><div class="ic-field"><label>ACTUAL</label><span style="font-weight:700">${s.actual_qty!=null?s.actual_qty:'—'}</span></div><div class="ic-field"><label>DIFF</label><span style="color:${diffColor};font-weight:700">${diffStr}</span></div><div class="ic-field"><label>DECHET</label><span style="color:var(--accent2)">${s.dechet!=null?s.dechet:'—'}</span></div><div class="ic-field"><label>START</label><span>${startStr}</span></div><div class="ic-field"><label>END</label><span>${endStr}</span></div><div class="ic-field"><label>DURATION</label><span style="color:var(--accent)">${durStr}</span></div></div>
       ${s.variance_notes||s.notes?`<div style="font-size:12px;color:var(--muted);font-family:'DM Mono',monospace;padding:0 2px">${esc(s.variance_notes||s.notes)}</div>`:''}
     </div>`;
   }).join('');
@@ -1185,7 +1198,7 @@ function renderHistory(){
 // ── MODALS ─────────────────────────────────────────────
 function openModal(type,id){
   editType=type; editId=id;
-  const today=new Date().toISOString().split('T')[0];
+  const today=todayLocal();
   if(type==='schedule'){
     const item=id?schedules.find(s=>s.id===id):null;
     document.getElementById('title-schedule').textContent=item?'Edit Schedule':'Add Schedule';
