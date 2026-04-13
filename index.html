@@ -928,7 +928,11 @@ function renderSchedule(){
     if(s.status==='inprogress') acts+=`<button class="btn-s b-complete" onclick="openCompleteModal('${s.id}')">✓ Done</button>`;
     const aq=s.actual_qty!=null?s.actual_qty:'—';
     const qd=s.actual_qty!=null&&s.planned_qty!=null&&s.actual_qty!==s.planned_qty;
-    const dechetInfo=s.status==='done'&&s.dechet!=null?` <span style="color:var(--warn);font-size:11px">(d:${s.dechet})</span>`:'';
+    // Cross-reference machine_logs for dechet & hours
+    const sLog=s.status==='done'?machineLogs.find(m=>m.machine===s.machine&&m.product===s.product&&m.date===(s.actual_end?s.actual_end.split('T')[0]:s.date)):null;
+    const sDec=s.dechet!=null?s.dechet:(sLog?sLog.dechet:null);
+    const sHrs=s.work_hours!=null?s.work_hours:(sLog&&sLog.hours!=null?sLog.hours:null);
+    const dechetInfo=s.status==='done'&&sDec!=null?` <span style="color:var(--warn);font-size:11px">(d:${sDec})</span>`:'';
     const linkedOrder=s.order_id?orders.find(o=>o.id===s.order_id):null;
     const orderLabel=linkedOrder?esc(linkedOrder.order_no):'—';
     return `<tr>
@@ -940,7 +944,7 @@ function renderSchedule(){
       <td>${s.planned_qty}</td>
       <td style="${qd?'color:var(--warn);font-weight:600':''}">${aq}${dechetInfo}</td>
       <td><span class="sbadge s-${s.status}">${s.status}</span></td>
-      <td style="color:var(--muted)">${s.status==='done'?(s.work_hours!=null?s.work_hours+'h':'—'):'—'}</td>
+      <td style="color:var(--muted)">${s.status==='done'?(sHrs!=null?sHrs+'h':'—'):'—'}</td>
       <td style="color:var(--muted);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(s.notes||'—')}</td>
       <td style="color:var(--muted)">${esc(s.created_by||'—')}</td>
       <td><div class="acts">${acts}</div></td>
@@ -953,7 +957,7 @@ function renderSchedule(){
     if(s.status==='inprogress') acts+=`<button class="btn-s b-complete" onclick="openCompleteModal('${s.id}')">✓ Done</button>`;
     return `<div class="item-card">
       <div class="ic-top"><div><div class="ic-name">${esc(s.product)}</div><div class="ic-sub">${esc(s.machine)} · ${s.date}</div></div><span class="sbadge s-${s.status}">${s.status}</span></div>
-      <div class="ic-mid"><div class="ic-field"><label>PLAN QTY</label><span>${s.planned_qty}</span></div><div class="ic-field"><label>ACT QTY</label><span>${s.actual_qty!=null?s.actual_qty:'—'}</span></div>${s.status==='done'&&s.dechet!=null?`<div class="ic-field"><label>DECHET</label><span style="color:var(--warn)">${s.dechet}</span></div>`:''}<div class="ic-field"><label>ORDER</label><span style="color:var(--accent)">${s.order_id?esc((orders.find(o=>o.id===s.order_id)||{}).order_no||'—'):'—'}</span></div></div>
+      <div class="ic-mid"><div class="ic-field"><label>PLAN QTY</label><span>${s.planned_qty}</span></div><div class="ic-field"><label>ACT QTY</label><span>${s.actual_qty!=null?s.actual_qty:'—'}</span></div>${(()=>{const cl=s.status==='done'?machineLogs.find(m=>m.machine===s.machine&&m.product===s.product&&m.date===(s.actual_end?s.actual_end.split('T')[0]:s.date)):null;const cd=s.dechet!=null?s.dechet:(cl?cl.dechet:null);const ch=s.work_hours!=null?s.work_hours:(cl&&cl.hours!=null?cl.hours:null);return (s.status==='done'&&cd!=null?`<div class="ic-field"><label>DECHET</label><span style="color:var(--warn)">${cd}</span></div>`:'')+(s.status==='done'&&ch!=null?`<div class="ic-field"><label>HOURS</label><span style="color:var(--accent)">${ch}h</span></div>`:'')})()}<div class="ic-field"><label>ORDER</label><span style="color:var(--accent)">${s.order_id?esc((orders.find(o=>o.id===s.order_id)||{}).order_no||'—'):'—'}</span></div></div>
       <div class="ic-actions">${acts}</div>
     </div>`;
   }).join('');
