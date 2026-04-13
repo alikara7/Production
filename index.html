@@ -348,7 +348,10 @@ select{width:100%;padding:11px 14px;background:var(--bg);border:1px solid var(--
         </div>
       </div>
       <div class="dash-section">
-        <div class="dash-section-title" data-i18n="todayMachineActivity">Today's Machine Activity</div>
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <div class="dash-section-title" data-i18n="todayMachineActivity">Today's Machine Activity</div>
+          <button class="btn-add" onclick="openModal('machines',null)" style="font-size:12px;padding:6px 14px">+ Log</button>
+        </div>
         <div id="d-machines"></div>
       </div>
     </div>
@@ -363,8 +366,7 @@ select{width:100%;padding:11px 14px;background:var(--bg);border:1px solid var(--
         </div>
       </div>
       <div class="filter-row">
-        <button class="fpill active" onclick="filterStatus('schedule','all',this)">All</button>
-        <button class="fpill" onclick="filterStatus('schedule','planned',this)">Planned</button>
+        <button class="fpill active" onclick="filterStatus('schedule','planned',this)">Planned</button>
         <button class="fpill" onclick="filterStatus('schedule','inprogress',this)">In Progress</button>
         <button class="fpill" onclick="filterStatus('schedule','done',this)">Done</button>
       </div>
@@ -449,7 +451,7 @@ select{width:100%;padding:11px 14px;background:var(--bg);border:1px solid var(--
         </div>
       </div>
       <div class="table-wrap"><table>
-        <thead><tr><th>DATE</th><th>MACHINE</th><th>PRODUCT</th><th>PLANNED</th><th>ACTUAL</th><th>DIFF</th><th>DECHET</th><th>START</th><th>END</th><th>DURATION</th><th>BY</th><th>NOTES</th></tr></thead>
+        <thead><tr><th>DATE</th><th>MACHINE</th><th>PRODUCT</th><th>PLANNED</th><th>ACTUAL</th><th>DIFF</th><th>DECHET</th><th>START</th><th>END</th><th>HOURS</th><th>BY</th><th>NOTES</th></tr></thead>
         <tbody id="tb-history"></tbody>
       </table></div>
       <div class="card-list" id="cards-history"></div>
@@ -496,6 +498,11 @@ select{width:100%;padding:11px 14px;background:var(--bg);border:1px solid var(--
       <label style="margin:0;white-space:nowrap">DECHET (auto)</label>
       <span id="c-dechet-display" style="font-family:'DM Mono',monospace;font-size:16px;font-weight:700;color:var(--warn)">0 kg</span>
     </div>
+    <div class="f-grid">
+      <div class="f-row"><label>START DATE</label><input type="date" id="c-start-date"/></div>
+      <div class="f-row"><label>END DATE</label><input type="date" id="c-end-date"/></div>
+    </div>
+    <div class="f-row"><label>TOTAL WORK HOURS</label><input type="number" id="c-work-hours" placeholder="0" min="0" step="0.5"/></div>
     <div class="f-row"><label>VARIANCE NOTES (if different from planned)</label><textarea id="c-variance" placeholder="Explain any difference..."></textarea></div>
     <div class="m-acts">
       <button class="btn-cancel" onclick="closeCompleteModal()">Cancel</button>
@@ -534,13 +541,14 @@ select{width:100%;padding:11px 14px;background:var(--bg);border:1px solid var(--
     </div>
     <div id="s-actual-fields" style="display:none">
       <div class="f-grid">
-        <div class="f-row"><label>ACTUAL START</label><input type="datetime-local" id="s-actual-start"/></div>
-        <div class="f-row"><label>ACTUAL END</label><input type="datetime-local" id="s-actual-end"/></div>
+        <div class="f-row"><label>START DATE</label><input type="date" id="s-actual-start"/></div>
+        <div class="f-row"><label>END DATE</label><input type="date" id="s-actual-end"/></div>
       </div>
       <div class="f-grid">
         <div class="f-row"><label>ACTUAL QUANTITY</label><input type="number" id="s-actual-qty" placeholder="0" min="0"/></div>
-        <div class="f-row"><label>VARIANCE NOTES</label><input type="text" id="s-variance" placeholder="Notes on difference"/></div>
+        <div class="f-row"><label>WORK HOURS</label><input type="number" id="s-work-hours" placeholder="0" min="0" step="0.5"/></div>
       </div>
+      <div class="f-row"><label>VARIANCE NOTES</label><input type="text" id="s-variance" placeholder="Notes on difference"/></div>
     </div>
     <div class="f-row"><label>NOTES</label><textarea id="s-notes" placeholder="Optional notes…"></textarea></div>
     <div class="m-acts">
@@ -702,7 +710,7 @@ const USERS = {
 let role = 'manager', userName = '';
 let schedules = [], orders = [], machineLogs = [];
 let editType = null, editId = null;
-let filters = { schedule: 'all', orders: 'all', machines: 'all' };
+let filters = { schedule: 'planned', orders: 'all', machines: 'all' };
 let searches = { schedule: '', orders: '', machines: '', history: '' };
 let machineFilter = 'all';
 
@@ -891,10 +899,12 @@ function renderDashboard(){
       const logs=todayLogs.filter(l=>l.machine===m);
       const out=logs.reduce((a,l)=>a+(l.output||0),0);
       const dec=logs.reduce((a,l)=>a+(l.dechet||0),0);
+      const hrs=logs.reduce((a,l)=>a+(l.hours||0),0);
       return `<div class="dash-machine-cell">
         <div class="dm-name">${m}</div>
         <div class="dm-stat" style="color:var(--green)">out: ${out}</div>
         <div class="dm-stat" style="color:var(--warn)">dechet: ${dec}</div>
+        <div class="dm-stat" style="color:var(--accent2)">${hrs}h worked</div>
         <div class="dm-stat" style="color:var(--muted)">${logs.length} log${logs.length!==1?'s':''}</div>
       </div>`;
     }).join('')}
@@ -914,6 +924,7 @@ function renderSchedule(){
     if(s.status==='inprogress') acts+=`<button class="btn-s b-complete" onclick="openCompleteModal('${s.id}')">✓ Done</button>`;
     const aq=s.actual_qty!=null?s.actual_qty:'—';
     const qd=s.actual_qty!=null&&s.planned_qty!=null&&s.actual_qty!==s.planned_qty;
+    const dechetInfo=s.status==='done'&&s.dechet?` <span style="color:var(--warn);font-size:11px">(d:${s.dechet})</span>`:'';
     const linkedOrder=s.order_id?orders.find(o=>o.id===s.order_id):null;
     const orderLabel=linkedOrder?esc(linkedOrder.order_no):'—';
     return `<tr>
@@ -923,7 +934,7 @@ function renderSchedule(){
       <td style="font-weight:600">${esc(s.product)}</td>
       <td style="color:var(--accent)">${orderLabel}</td>
       <td>${s.planned_qty}</td>
-      <td style="${qd?'color:var(--warn);font-weight:600':''}">${aq}</td>
+      <td style="${qd?'color:var(--warn);font-weight:600':''}">${aq}${dechetInfo}</td>
       <td><span class="sbadge s-${s.status}">${s.status}</span></td>
       <td style="color:var(--muted);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(s.notes||'—')}</td>
       <td style="color:var(--muted)">${esc(s.created_by||'—')}</td>
@@ -937,7 +948,7 @@ function renderSchedule(){
     if(s.status==='inprogress') acts+=`<button class="btn-s b-complete" onclick="openCompleteModal('${s.id}')">✓ Done</button>`;
     return `<div class="item-card">
       <div class="ic-top"><div><div class="ic-name">${esc(s.product)}</div><div class="ic-sub">${esc(s.machine)} · ${s.date}</div></div><span class="sbadge s-${s.status}">${s.status}</span></div>
-      <div class="ic-mid"><div class="ic-field"><label>PLAN QTY</label><span>${s.planned_qty}</span></div><div class="ic-field"><label>ACT QTY</label><span>${s.actual_qty!=null?s.actual_qty:'—'}</span></div><div class="ic-field"><label>ORDER</label><span style="color:var(--accent)">${s.order_id?esc((orders.find(o=>o.id===s.order_id)||{}).order_no||'—'):'—'}</span></div></div>
+      <div class="ic-mid"><div class="ic-field"><label>PLAN QTY</label><span>${s.planned_qty}</span></div><div class="ic-field"><label>ACT QTY</label><span>${s.actual_qty!=null?s.actual_qty:'—'}</span></div>${s.status==='done'&&s.dechet?`<div class="ic-field"><label>DECHET</label><span style="color:var(--warn)">${s.dechet}</span></div>`:''}<div class="ic-field"><label>ORDER</label><span style="color:var(--accent)">${s.order_id?esc((orders.find(o=>o.id===s.order_id)||{}).order_no||'—'):'—'}</span></div></div>
       <div class="ic-actions">${acts}</div>
     </div>`;
   }).join('');
@@ -999,7 +1010,7 @@ function planFromOrder(orderId){
   const order=orders.find(o=>o.id===orderId);
   if(!order) return;
   editType='schedule'; editId=null;
-  const today=new Date().toISOString().split('T')[0];
+  const today=todayLocal();
   document.getElementById('title-schedule').textContent='Plan Production for '+order.order_no;
   document.getElementById('s-date').value=today;
   document.getElementById('s-machine').value='';
@@ -1013,6 +1024,7 @@ function planFromOrder(orderId){
   document.getElementById('s-actual-start').value='';
   document.getElementById('s-actual-end').value='';
   document.getElementById('s-actual-qty').value='';
+  document.getElementById('s-work-hours').value='';
   document.getElementById('s-variance').value='';
   document.getElementById('s-notes').value='';
   document.getElementById('modal-schedule').classList.add('open');
@@ -1067,8 +1079,7 @@ function renderMachines(){
 
 // ── STATUS FLOW ────────────────────────────────────────
 async function startProduction(id){
-  const now=new Date().toISOString();
-  await sb.from('production_schedule').update({status:'inprogress',actual_start:now}).eq('id',id);
+  await sb.from('production_schedule').update({status:'inprogress',actual_start:todayLocal()}).eq('id',id);
   // Auto-update linked order to inprogress
   const item=schedules.find(s=>s.id===id);
   if(item&&item.order_id){
@@ -1090,6 +1101,9 @@ function openCompleteModal(id){
   document.getElementById('c-rawmat').value='';
   document.getElementById('c-dechet-display').textContent='0 kg';
   document.getElementById('c-dechet-display').style.color='var(--green)';
+  document.getElementById('c-start-date').value=item?.actual_start?item.actual_start.split('T')[0]:(item?.date||todayLocal());
+  document.getElementById('c-end-date').value=todayLocal();
+  document.getElementById('c-work-hours').value='';
   document.getElementById('c-variance').value='';
   document.getElementById('modal-complete').classList.add('open');
 }
@@ -1115,21 +1129,22 @@ async function doComplete(){
   const rawMat=document.getElementById('c-rawmat').value.trim();
   const dechet=Math.max(0,Math.round((rawAmt-(actualQty*unitWt))*100)/100);
   const varianceNotes=document.getElementById('c-variance').value.trim();
-  const now=new Date().toISOString();
+  const startDate=document.getElementById('c-start-date').value||todayLocal();
+  const endDate=document.getElementById('c-end-date').value||todayLocal();
+  const workHours=parseFloat(document.getElementById('c-work-hours').value)||0;
   const item=schedules.find(s=>s.id===id);
   try{
     await sb.from('production_schedule').update({
-      status:'done',actual_end:now,actual_qty:actualQty,variance_notes:varianceNotes,
-      dechet:dechet,raw_material:rawMat,raw_material_used:rawAmt
+      status:'done',actual_start:startDate,actual_end:endDate,actual_qty:actualQty,variance_notes:varianceNotes,
+      dechet:dechet,raw_material:rawMat,raw_material_used:rawAmt,work_hours:workHours
     }).eq('id',id);
     // Auto-create machine log on completion with calculated dechet
     if(item){
-      const hours=item.actual_start?Math.round((new Date(now)-new Date(item.actual_start))/36e5*10)/10:0;
       const created_at=new Date().toLocaleDateString('tr-TR')+' '+new Date().toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'});
       await sb.from('machine_logs').insert({
         id:uid(),date:todayLocal(),machine:item.machine,operator:userName,
         product:item.product,raw_material:rawMat,raw_material_used:rawAmt,
-        hours:hours,output:actualQty,dechet:dechet,
+        hours:workHours,output:actualQty,dechet:dechet,
         notes:varianceNotes||item.notes||'',
         created_by:userName,created_at
       });
@@ -1158,10 +1173,9 @@ function renderHistory(){
     const diff=(s.actual_qty!=null&&s.planned_qty!=null)?(s.actual_qty-s.planned_qty):null;
     const diffStr=diff!=null?(diff>=0?'+':'')+diff:'—';
     const diffColor=diff!=null?(diff<0?'var(--danger)':diff>0?'var(--green)':'var(--muted)'):'var(--muted)';
-    let startStr='—',endStr='—',durStr='—';
-    if(s.actual_start){const d=new Date(s.actual_start);startStr=d.toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'});}
-    if(s.actual_end){const d=new Date(s.actual_end);endStr=d.toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'});}
-    if(s.actual_start&&s.actual_end){durStr=Math.round((new Date(s.actual_end)-new Date(s.actual_start))/36e5*10)/10+'h';}
+    const startStr=s.actual_start?s.actual_start.split('T')[0]:'—';
+    const endStr=s.actual_end?s.actual_end.split('T')[0]:'—';
+    const durStr=s.work_hours!=null?s.work_hours+'h':'—';
     return `<tr>
       <td>${s.date}</td>
       <td style="color:var(--accent2)">${esc(s.machine)}</td>
@@ -1182,14 +1196,12 @@ function renderHistory(){
     const diff=(s.actual_qty!=null&&s.planned_qty!=null)?(s.actual_qty-s.planned_qty):null;
     const diffStr=diff!=null?(diff>=0?'+':'')+diff:'—';
     const diffColor=diff!=null?(diff<0?'var(--danger)':diff>0?'var(--green)':'var(--muted)'):'var(--muted)';
-    let durStr='—';
-    if(s.actual_start&&s.actual_end){durStr=Math.round((new Date(s.actual_end)-new Date(s.actual_start))/36e5*10)/10+'h';}
-    let startStr='—',endStr='—';
-    if(s.actual_start){startStr=new Date(s.actual_start).toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'});}
-    if(s.actual_end){endStr=new Date(s.actual_end).toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'});}
+    const startStr=s.actual_start?s.actual_start.split('T')[0]:'—';
+    const endStr=s.actual_end?s.actual_end.split('T')[0]:'—';
+    const durStr=s.work_hours!=null?s.work_hours+'h':'—';
     return `<div class="item-card">
       <div class="ic-top"><div><div class="ic-name">${esc(s.product)}</div><div class="ic-sub">${esc(s.machine)} · ${s.date}</div></div><span class="sbadge s-done">done</span></div>
-      <div class="ic-mid"><div class="ic-field"><label>PLANNED</label><span>${s.planned_qty||0}</span></div><div class="ic-field"><label>ACTUAL</label><span style="font-weight:700">${s.actual_qty!=null?s.actual_qty:'—'}</span></div><div class="ic-field"><label>DIFF</label><span style="color:${diffColor};font-weight:700">${diffStr}</span></div><div class="ic-field"><label>DECHET</label><span style="color:var(--accent2)">${s.dechet!=null?s.dechet:'—'}</span></div><div class="ic-field"><label>START</label><span>${startStr}</span></div><div class="ic-field"><label>END</label><span>${endStr}</span></div><div class="ic-field"><label>DURATION</label><span style="color:var(--accent)">${durStr}</span></div></div>
+      <div class="ic-mid"><div class="ic-field"><label>PLANNED</label><span>${s.planned_qty||0}</span></div><div class="ic-field"><label>ACTUAL</label><span style="font-weight:700">${s.actual_qty!=null?s.actual_qty:'—'}</span></div><div class="ic-field"><label>DIFF</label><span style="color:${diffColor};font-weight:700">${diffStr}</span></div><div class="ic-field"><label>DECHET</label><span style="color:var(--accent2)">${s.dechet!=null?s.dechet:'—'}</span></div><div class="ic-field"><label>START</label><span>${startStr}</span></div><div class="ic-field"><label>END</label><span>${endStr}</span></div><div class="ic-field"><label>HOURS</label><span style="color:var(--accent)">${durStr}</span></div></div>
       ${s.variance_notes||s.notes?`<div style="font-size:12px;color:var(--muted);font-family:'DM Mono',monospace;padding:0 2px">${esc(s.variance_notes||s.notes)}</div>`:''}
     </div>`;
   }).join('');
@@ -1214,9 +1226,10 @@ function openModal(type,id){
     document.getElementById('s-product').value=item?.product||'';
     document.getElementById('s-qty').value=item?.planned_qty||'';
     document.getElementById('s-status').value=item?.status||'planned';
-    document.getElementById('s-actual-start').value=item?.actual_start?item.actual_start.slice(0,16):'';
-    document.getElementById('s-actual-end').value=item?.actual_end?item.actual_end.slice(0,16):'';
+    document.getElementById('s-actual-start').value=item?.actual_start?item.actual_start.split('T')[0]:'';
+    document.getElementById('s-actual-end').value=item?.actual_end?item.actual_end.split('T')[0]:'';
     document.getElementById('s-actual-qty').value=item?.actual_qty||'';
+    document.getElementById('s-work-hours').value=item?.work_hours||'';
     document.getElementById('s-variance').value=item?.variance_notes||'';
     document.getElementById('s-actual-fields').style.display=item&&item.status==='done'?'block':'none';
     document.getElementById('s-notes').value=item?.notes||'';
@@ -1266,8 +1279,9 @@ async function saveRecord(type){
       product:document.getElementById('s-product').value.trim(),
       planned_qty:parseFloat(document.getElementById('s-qty').value)||0,
       status:document.getElementById('s-status').value,
-      actual_start:document.getElementById('s-actual-start').value?new Date(document.getElementById('s-actual-start').value).toISOString():null,
-      actual_end:document.getElementById('s-actual-end').value?new Date(document.getElementById('s-actual-end').value).toISOString():null,
+      actual_start:document.getElementById('s-actual-start').value||null,
+      actual_end:document.getElementById('s-actual-end').value||null,
+      work_hours:parseFloat(document.getElementById('s-work-hours').value)||null,
       actual_qty:document.getElementById('s-actual-qty').value?parseFloat(document.getElementById('s-actual-qty').value):null,
       variance_notes:document.getElementById('s-variance').value.trim()||null,
       notes:document.getElementById('s-notes').value.trim(),
