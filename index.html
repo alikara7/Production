@@ -1178,6 +1178,7 @@ async function doComplete(){
 function renderHistory(){
   const tbody=document.getElementById('tb-history');
   let items=schedules.filter(s=>s.status==='done');
+  items.sort((a,b)=>(b.actual_end||b.date||'').localeCompare(a.actual_end||a.date||''));
   if(searches.history) items=items.filter(s=>((s.product||'')+(s.machine||'')+(s.notes||'')+(s.variance_notes||'')).toLowerCase().includes(searches.history));
   if(!items.length){tbody.innerHTML=`<tr><td colspan="12"><div class="empty">${t('noCompleted')}</div></td></tr>`;document.getElementById('cards-history').innerHTML=`<div class="empty">${t('noCompleted')}</div>`;return;}
   tbody.innerHTML=items.map(s=>{
