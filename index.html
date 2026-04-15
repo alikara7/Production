@@ -1140,10 +1140,11 @@ async function doComplete(){
   const workHours=parseFloat(document.getElementById('c-work-hours').value)||0;
   const item=schedules.find(s=>s.id===id);
   try{
-    await sb.from('production_schedule').update({
+    const {error:updErr}=await sb.from('production_schedule').update({
       status:'done',actual_start:startDate,actual_end:endDate,actual_qty:actualQty,variance_notes:varianceNotes,
       dechet:dechet,raw_material:rawMat,raw_material_used:rawAmt,work_hours:workHours
     }).eq('id',id);
+    if(updErr) throw updErr;
     // Auto-create machine log on completion with calculated dechet
     if(item){
       const created_at=new Date().toLocaleDateString('tr-TR')+' '+new Date().toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'});
@@ -1163,7 +1164,11 @@ async function doComplete(){
       }
     }
     closeCompleteModal();
+    filters.schedule='done';
     await loadAll();
+    // Update filter pills UI to reflect 'done'
+    const schFilterRow=document.querySelector('#tab-schedule .filter-row');
+    if(schFilterRow){schFilterRow.querySelectorAll('.fpill').forEach(p=>{p.classList.remove('active');if(p.textContent.trim().toLowerCase()==='done')p.classList.add('active');});}
     showToast(t('prodCompleted'),'success');
   }catch(e){showToast(t('saveFailed'),'error');}
   btn.disabled=false;btn.textContent=t('markComplete');
