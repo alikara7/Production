@@ -486,8 +486,8 @@ select{width:100%;padding:11px 14px;background:var(--bg);border:1px solid var(--
     <input type="hidden" id="c-id"/>
     <div class="f-row"><label>ACTUAL QUANTITY PRODUCED</label><input type="number" id="c-actual-qty" placeholder="0" min="0" oninput="calcDechet()"/></div>
     <div class="f-grid">
-      <div class="f-row"><label>RAW MATERIAL USED (kg)</label><input type="number" id="c-rawamt" placeholder="0" min="0" step="0.1" oninput="calcDechet()"/></div>
-      <div class="f-row"><label>UNIT PRODUCT WEIGHT (kg)</label><input type="number" id="c-unitwt" placeholder="0" min="0" step="0.01" oninput="calcDechet()"/></div>
+      <div class="f-row"><label>RAW MATERIAL USED (kg)</label><input type="number" id="c-rawamt" placeholder="0" min="0" step="any" oninput="calcDechet()"/></div>
+      <div class="f-row"><label>UNIT PRODUCT WEIGHT (kg)</label><input type="number" id="c-unitwt" placeholder="0" min="0" step="any" oninput="calcDechet()"/></div>
     </div>
     <div class="f-row"><label>RAW MATERIAL</label><input type="text" id="c-rawmat" placeholder="e.g. Whey Powder"/></div>
     <div class="f-row" style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
@@ -1170,7 +1170,7 @@ async function doComplete(){
     const schFilterRow=document.querySelector('#tab-schedule .filter-row');
     if(schFilterRow){schFilterRow.querySelectorAll('.fpill').forEach(p=>{p.classList.remove('active');if(p.textContent.trim().toLowerCase()==='done')p.classList.add('active');});}
     showToast(t('prodCompleted'),'success');
-  }catch(e){showToast(t('saveFailed'),'error');}
+  }catch(e){console.error('doComplete error:',e);showToast(t('saveFailed')+' — '+(e.message||JSON.stringify(e)),'error');}
   btn.disabled=false;btn.textContent=t('markComplete');
 }
 
