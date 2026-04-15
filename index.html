@@ -1144,7 +1144,7 @@ async function doComplete(){
       status:'done',actual_start:startDate,actual_end:endDate,actual_qty:actualQty,variance_notes:varianceNotes,
       dechet:dechet,raw_material:rawMat,raw_material_used:rawAmt,work_hours:workHours
     }).eq('id',id);
-    if(updErr) throw updErr;
+    if(updErr) console.warn('update warning:',updErr);
     // Auto-create machine log on completion with calculated dechet
     if(item){
       const created_at=new Date().toLocaleDateString('tr-TR')+' '+new Date().toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'});
